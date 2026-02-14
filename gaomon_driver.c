@@ -1,4 +1,5 @@
-#include "gaomon_driver.h"
+#include "global.h"
+#include "fops.h"
 
 static int __init gaomon_driver_init(void){
 	pr_info("Hello, world!\n");
@@ -25,9 +26,7 @@ static int __init gaomon_driver_init(void){
 	pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
 	printk(KERN_INFO "To talk to\n");
 	printk(KERN_INFO "the driver, create a dev file with\n");
-	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DRIVER_NAME, gaomon_major_no);
-	printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n");
-	printk(KERN_INFO "the device file.\n");
+	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DRIVER_NAME, gaomon_major_no); printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n"); printk(KERN_INFO "the device file.\n");
 	printk(KERN_INFO "Remove the device file and module when done.\n");
 
 
@@ -38,57 +37,6 @@ static void __exit gaomon_driver_exit(void){
 	unregister_chrdev_region(gaomon_dev, 0);
 }
 
-static int gaomon_open(struct inode *inode, struct file *filp){
-	if(gaomon_device_open){
-		return -EBUSY;
-	}
-
-	gaomon_device_open = 1;
-
-	sprintf(msg, "If you can see this message, it worked!");
-	msg_ptr = msg;
-	try_module_get(THIS_MODULE);
-	
-	return 0;
-}
-
-static int gaomon_release(struct inode *inode, struct file *filp){
-	gaomon_device_open = 0;
-
-	module_put(THIS_MODULE);
-
-	return 0;
-}	
-
-static ssize_t gaomon_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
-{
-	int bytes_read = 0;
-
-	if(msg_ptr == NULL){
-		return -1;
-	}
-
-	if(*msg_ptr == 0){
-		return 0;
-	}
-
-	while(length && *msg_ptr){
-		put_user(*(msg_ptr++), buffer++);
-
-		length--;
-		bytes_read++;
-	}
-
-	printk(KERN_INFO "Message received: ", msg);
-
-	return bytes_read;
-}
-		
-static ssize_t gaomon_write(struct file *filp, const char *buff, size_t len, loff_t * off)
-{
-	printk(KERN_ALERT "Sorry, this operation isn't supported.\n");
-	return -EINVAL;
-}
 
 module_init(gaomon_driver_init);
 module_exit(gaomon_driver_exit);

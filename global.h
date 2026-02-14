@@ -1,5 +1,5 @@
-#ifndef GAOMON_DRIVER_H
-#define GAOMON_DRIVER_H
+#ifndef GLOBAL_H
+#define GLOBAL_H
 
 #include <linux/module.h> // needed by all modules
 #include <linux/printk.h> // needed for pr_info()
@@ -17,23 +17,13 @@ static struct cdev gaomon_cdev;
 static int gaomon_major_no;
 static int gaomon_minor_no;
 
+static unsigned int gaomon_device_count = 0;
+static struct urb *urb_input_buffer;
+static unsigned char *input_buffer;
+static size_t input_buffer_size;
+
 static bool gaomon_device_open = false;
 static char msg[BUF_LEN];
 static char *msg_ptr;
-
-static int gaomon_open(struct inode *, struct file *);
-static int gaomon_release(struct inode *, struct file *);
-static ssize_t gaomon_read(struct file *, char *, size_t, loff_t *);
-static ssize_t gaomon_write(struct file *, const char *, size_t, loff_t *);
-
-static struct file_operations fops = {
-	.owner = THIS_MODULE,
-	.read = gaomon_read,
-	.write = gaomon_write,
-	.open = gaomon_open,
-	.release = gaomon_release
-};
-
-
 
 #endif

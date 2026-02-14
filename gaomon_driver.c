@@ -1,20 +1,20 @@
-#include "usb_spoof.h"
+#include "gaomon_driver.h"
 
-static int __init usb_spoof_init(void){
+static int __init gaomon_driver_init(void){
 	pr_info("Hello, world!\n");
 
 	int ret;
 
-	ret = alloc_chrdev_region(&USB_dev, 0, 1, DRIVER_NAME);
+	ret = alloc_chrdev_region(&gaomon_dev, 0, 1, DRIVER_NAME);
 
 	if(ret){ return ret; }
 
-	USB_major_no = MAJOR(USB_dev);
-	USB_minor_no = MINOR(USB_dev);
+	gaomon_major_no = MAJOR(gaomon_dev);
+	gaomon_minor_no = MINOR(gaomon_dev);
 
-	cdev_init(&USB_cdev, &fops);
+	cdev_init(&gaomon_cdev, &fops);
 
-	ret = cdev_add(&USB_cdev, USB_dev, 1);
+	ret = cdev_add(&gaomon_cdev, gaomon_dev, 1);
 
 	if(ret){
 	       	printk(KERN_ALERT "error with adding char device to system: %d.\n", ret); 
@@ -22,10 +22,10 @@ static int __init usb_spoof_init(void){
        	}
 	
 
-	pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, USB_major_no, USB_minor_no);	
+	pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
 	printk(KERN_INFO "To talk to\n");
 	printk(KERN_INFO "the driver, create a dev file with\n");
-	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DRIVER_NAME, USB_major_no);
+	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DRIVER_NAME, gaomon_major_no);
 	printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n");
 	printk(KERN_INFO "the device file.\n");
 	printk(KERN_INFO "Remove the device file and module when done.\n");
@@ -33,17 +33,17 @@ static int __init usb_spoof_init(void){
 
 	return 0;
 }
-static void __exit usb_spoof_exit(void){
+static void __exit gaomon_driver_exit(void){
 	printk(KERN_INFO "Goodbye!");
-	unregister_chrdev_region(USB_dev, 0);
+	unregister_chrdev_region(gaomon_dev, 0);
 }
 
-static int USB_open(struct inode *inode, struct file *filp){
-	if(USB_device_open){
+static int gaomon_open(struct inode *inode, struct file *filp){
+	if(gaomon_device_open){
 		return -EBUSY;
 	}
 
-	USB_device_open = 1;
+	gaomon_device_open = 1;
 
 	sprintf(msg, "If you can see this message, it worked!");
 	msg_ptr = msg;
@@ -52,15 +52,15 @@ static int USB_open(struct inode *inode, struct file *filp){
 	return 0;
 }
 
-static int USB_release(struct inode *inode, struct file *filp){
-	USB_device_open = 0;
+static int gaomon_release(struct inode *inode, struct file *filp){
+	gaomon_device_open = 0;
 
 	module_put(THIS_MODULE);
 
 	return 0;
 }	
 
-static ssize_t USB_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
+static ssize_t gaomon_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
 {
 	int bytes_read = 0;
 
@@ -84,15 +84,15 @@ static ssize_t USB_read(struct file *filp, char *buffer, size_t length, loff_t *
 	return bytes_read;
 }
 		
-static ssize_t USB_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+static ssize_t gaomon_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 {
 	printk(KERN_ALERT "Sorry, this operation isn't supported.\n");
 	return -EINVAL;
 }
 
-module_init(usb_spoof_init);
-module_exit(usb_spoof_exit);
+module_init(gaomon_driver_init);
+module_exit(gaomon_driver_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Abhilasha Tandon");
-MODULE_DESCRIPTION("A basic USB spoofer. Will print out bytes received from USB.\n");
+MODULE_DESCRIPTION("A linux device driver for the gaomon PD1560 tablet.\n");

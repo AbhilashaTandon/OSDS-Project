@@ -1,3 +1,3 @@
-sudo insmod usb_spoof.ko
-sudo rmmod usb_spoof.ko
+sudo insmod gaomondriver.ko
+sudo rmmod gaomondriver.ko
 sudo dmesg

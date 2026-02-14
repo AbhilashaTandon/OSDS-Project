@@ -24,7 +24,7 @@ static int __init gaomon_driver_init(void){
 	
 
 	pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
-	printk(KERN_INFO "To talk to\n");
+	printk(KERN_INFO "This line is a test. To talk to\n");
 	printk(KERN_INFO "the driver, create a dev file with\n");
 	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DRIVER_NAME, gaomon_major_no); printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n"); printk(KERN_INFO "the device file.\n");
 	printk(KERN_INFO "Remove the device file and module when done.\n");

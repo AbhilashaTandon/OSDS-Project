@@ -34,7 +34,60 @@ static int __init usb_spoof_init(void){
 	return 0;
 }
 static void __exit usb_spoof_exit(void){
+	printk(KERN_INFO "Goodbye!");
 	unregister_chrdev_region(USB_dev, 0);
+}
+
+static int USB_open(struct inode *inode, struct file *filp){
+	if(USB_device_open){
+		return -EBUSY;
+	}
+
+	USB_device_open = 1;
+
+	sprintf(msg, "If you can see this message, it worked!");
+	msg_ptr = msg;
+	try_module_get(THIS_MODULE);
+	
+	return 0;
+}
+
+static int USB_release(struct inode *inode, struct file *filp){
+	USB_device_open = 0;
+
+	module_put(THIS_MODULE);
+
+	return 0;
+}	
+
+static ssize_t USB_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
+{
+	int bytes_read = 0;
+
+	if(msg_ptr == NULL){
+		return -1;
+	}
+
+	if(*msg_ptr == 0){
+		return 0;
+	}
+
+	while(length && *msg_ptr){
+		put_user(*(msg_ptr++), buffer++);
+
+		length--;
+		bytes_read++;
+	}
+
+	printk(KERN_INFO "Message received: ", msg);
+
+	return bytes_read;
+}
+		
+static ssize_t USB_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+{
+	printk(KERN_ALERT "Sorry, this operation isn't supported.\n");
+	return -EINVAL;
 }
 
 module_init(usb_spoof_init);

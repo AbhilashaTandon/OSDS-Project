@@ -6,6 +6,9 @@
 #include <linux/init.h> // needed for macros
 #include <linux/cdev.h>
 #include <linux/fs.h>
+#include <linux/kernel.h>
+#include <linux/usb.h>
+#include <asm/uaccess.h> // needed for put_user
 #define DRIVER_NAME "usb_spoofer"
 #define BUF_LEN 80
 
@@ -24,10 +27,13 @@ static ssize_t USB_read(struct file *, char *, size_t, loff_t *);
 static ssize_t USB_write(struct file *, const char *, size_t, loff_t *);
 
 static struct file_operations fops = {
+	.owner = THIS_MODULE,
 	.read = USB_read,
 	.write = USB_write,
 	.open = USB_open,
 	.release = USB_release
 };
+
+
 
 #endif

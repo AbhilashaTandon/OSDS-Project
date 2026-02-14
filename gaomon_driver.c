@@ -2,7 +2,7 @@
 #include "fops.h"
 #include "udev.h"
 
-static int __init gaomon_driver_init(void){
+static int __init gaomon_init(void){
 
     int ret;
 
@@ -22,9 +22,9 @@ static int __init gaomon_driver_init(void){
         return ret;
     }
 
-    ret = usb_register(&gaomon_driver);
+    ret = usb_register(&gaomon_udriver);
     if(ret){
-        printk(KERN_ALERT "usb register failed for the %s driver. Error number %d\n", gaomon_driver.name, ret);
+        printk(KERN_ALERT "usb register failed for the %s driver. Error number %d\n", gaomon_udriver.name, ret);
         return -1;
     }
 
@@ -39,34 +39,16 @@ static int __init gaomon_driver_init(void){
 
     return 0;
 }
-static void __exit gaomon_driver_exit(void){
+static void __exit gaomon_exit(void){
     printk(KERN_INFO "Goodbye!");
-    usb_deregister(&gaomon_driver);
+    usb_deregister(&gaomon_udriver);
     unregister_chrdev_region(gaomon_dev, 0);
 }
 
-static int gaomon_open(struct inode *inode, struct file *filp){
-    return 0;
-}
 
-static int gaomon_release(struct inode *inode, struct file *filp){
-    return 0;
-}	
-
-static ssize_t gaomon_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
-{
-    return 0;
-}
-
-static ssize_t gaomon_write(struct file *filp, const char *buff, size_t len, loff_t * off)
-{
-    printk(KERN_ALERT "Sorry, this operation isn't supported.\n");
-    return -EINVAL;
-}
-
-module_init(gaomon_driver_init);
-module_exit(gaomon_driver_exit);
-module_usb_driver(gaomon_driver);
+module_init(gaomon_init);
+module_exit(gaomon_exit);
+module_usb_driver(gaomon_udriver);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Abhilasha Tandon");

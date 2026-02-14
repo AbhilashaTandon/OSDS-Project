@@ -1,4 +1,6 @@
 obj-m += gaomon_driver.o
+obj-m += fops.o
+obj-m += udev.o
 
 PWD := $(CURDIR)
 

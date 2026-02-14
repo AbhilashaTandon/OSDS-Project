@@ -2,6 +2,7 @@
 #define UDEV_H
 
 #include "global.h"
+#include "fops.h"
 
 #define VENDOR_ID 0x256c
 #define PRODUCT_ID 0x006e
@@ -16,16 +17,20 @@ MODULE_DEVICE_TABLE(usb, id_list);
 static int gaomon_probe(struct usb_interface *, const struct usb_device_id *);
 static void gaomon_disconnect(struct usb_interface *);
 
-/*
-static struct usb_driver gaomon_driver = {
+static struct usb_device *gaomon_udev;
+static struct usb_interface *gaomon_uinterface;
+
+static struct usb_driver gaomon_udriver = {
     .name = "gaomon",
     .probe = gaomon_probe,
     .disconnect = gaomon_disconnect,
     .id_table = id_list
 };
-*/
+//we also want suspend and resume methods in this
 
-//we also want suspend and resume methods
-
+static struct usb_class_driver gaomon_class = {
+    .name = "gaomon%d",
+    .fops = &fops
+};
 
 #endif

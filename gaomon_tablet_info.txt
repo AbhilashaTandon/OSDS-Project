@@ -1,0 +1,138 @@
+Bus 001 Device 003: ID 256c:006e  Tablet Monitor
+Couldn't open device, some information will be missing
+Device Descriptor:
+  bLength                18
+  bDescriptorType         1
+  bcdUSB               1.10
+  bDeviceClass            0 [unknown]
+  bDeviceSubClass         0 [unknown]
+  bDeviceProtocol         0 
+  bMaxPacketSize0         8
+  idVendor           0x256c 
+  idProduct          0x006e Tablet Monitor
+  bcdDevice            0.00
+  iManufacturer           5 
+  iProduct                6 Tablet Monitor
+  iSerial                 0 
+  bNumConfigurations      1
+  Configuration Descriptor:
+    bLength                 9
+    bDescriptorType         2
+    wTotalLength       0x003b
+    bNumInterfaces          2
+    bConfigurationValue     1
+    iConfiguration          0 
+    bmAttributes         0x80
+      (Bus Powered)
+    MaxPower              100mA
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        0
+      bAlternateSetting       0
+      bNumEndpoints           1
+      bInterfaceClass         3 Human Interface Device
+      bInterfaceSubClass      1 Boot Interface Subclass
+      bInterfaceProtocol      2 Mouse
+      iInterface              0 
+        HID Device Descriptor:
+          bLength                 9
+          bDescriptorType        33
+          bcdHID               1.11
+          bCountryCode            0 Not supported
+          bNumDescriptors         1
+          bDescriptorType        34 Report
+          wDescriptorLength      18
+          Report Descriptors: 
+            ** UNAVAILABLE **
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x81  EP 1 IN
+        bmAttributes            3
+          Transfer Type            Interrupt
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0040  1x 64 bytes
+        bInterval               2
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        1
+      bAlternateSetting       0
+      bNumEndpoints           1
+      bInterfaceClass         3 Human Interface Device
+      bInterfaceSubClass      1 Boot Interface Subclass
+      bInterfaceProtocol      2 Mouse
+      iInterface              0 
+        HID Device Descriptor:
+          bLength                 9
+          bDescriptorType        33
+          bcdHID               1.11
+          bCountryCode            0 Not supported
+          bNumDescriptors         1
+          bDescriptorType        34 Report
+          wDescriptorLength      83
+          Report Descriptors: 
+            ** UNAVAILABLE **
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x82  EP 2 IN
+        bmAttributes            3
+          Transfer Type            Interrupt
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0010  1x 16 bytes
+        bInterval               2
+
+
+
+
+I: Bus=0003 Vendor=256c Product=006e Version=0111
+N: Name="Tablet Monitor"
+P: Phys=usb-0000:00:06.0-2/input0
+S: Sysfs=/devices/pci0000:00/0000:00:06.0/usb1/1-2/1-2:1.0/0003:256C:006E.0002/input/input9
+U: Uniq=OEM02_M177_170831
+H: Handlers=mouse4 event8
+B: PROP=1
+B: EV=1b
+B: KEY=1c01 0 0 0 0 0
+B: ABS=d000003
+B: MSC=10
+
+I: Bus=0003 Vendor=256c Product=006e Version=0111
+N: Name="Tablet Monitor"
+P: Phys=usb-0000:00:06.0-2/input0
+S: Sysfs=/devices/pci0000:00/0000:00:06.0/usb1/1-2/1-2:1.0/0003:256C:006E.0002/input/input10
+U: Uniq=OEM02_M177_170831
+H: Handlers=event9 js2
+B: PROP=0
+B: EV=1b
+B: KEY=800 201ff 0 0 0 0
+B: ABS=3
+B: MSC=10
+
+I: Bus=0003 Vendor=256c Product=006e Version=0111
+N: Name="Tablet Monitor Touch Strip"
+P: Phys=usb-0000:00:06.0-2/input0
+S: Sysfs=/devices/pci0000:00/0000:00:06.0/usb1/1-2/1-2:1.0/0003:256C:006E.0002/input/input11
+U: Uniq=OEM02_M177_170831
+H: Handlers=event10 js3
+B: PROP=0
+B: EV=b
+B: KEY=1 0 0 0 0
+B: ABS=1000000001b
+
+I: Bus=0003 Vendor=256c Product=006e Version=0111
+N: Name="Tablet Monitor Dial"
+P: Phys=usb-0000:00:06.0-2/input0
+S: Sysfs=/devices/pci0000:00/0000:00:06.0/usb1/1-2/1-2:1.0/0003:256C:006E.0002/input/input12
+U: Uniq=OEM02_M177_170831
+H: Handlers=mouse5 event11 js4
+B: PROP=0
+B: EV=1f
+B: KEY=1 0 0 0 0
+B: REL=900
+B: ABS=10000000003
+B: MSC=10

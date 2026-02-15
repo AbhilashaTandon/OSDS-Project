@@ -15,8 +15,9 @@
 #include <linux/uaccess.h>
 #include <linux/usb.h>
 
-#define DRIVER_NAME "gaomon_driver"
+#define DRIVER_NAME "gaomondriver"
 #define BUF_LEN 80
+#define MINOR_BASE 192
 
 #define VENDOR_ID 0x256c
 #define PRODUCT_ID 0x006e
@@ -80,13 +81,14 @@ struct usb_driver gaomon_udriver =
 	.name = "gaomon",
     .probe = gaomon_probe,
     .disconnect = gaomon_disconnect,
-    .id_table = id_list
+    .id_table = id_list,
 };
 
 
 static struct usb_class_driver gaomon_class = {
     .name = "gaomon%d",
-    .fops = &fops
+    .fops = &fops,
+	.minor_base = MINOR_BASE,
 };
 
 //vars

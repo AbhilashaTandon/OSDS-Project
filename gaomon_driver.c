@@ -1,5 +1,6 @@
 #include "global.h"
 #include "fops.h"
+#include "udev.h"
 
 static int __init gaomon_driver_init(void){
 

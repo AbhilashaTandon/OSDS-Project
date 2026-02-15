@@ -5,8 +5,9 @@
 #include "fops.h"
 
 static int gaomon_probe(struct usb_interface *interface, const struct usb_device_id *device_id){
+	printk(KERN_INFO "gaomondriver: usb device (%04X:%04X) plugged\n", device_id->idVendor, device_id->idProduct);
+
 	struct gaomon_data *data;
-	printk(KERN_INFO "usb device (%04X:%04X) plugged\n", device_id->idVendor, device_id->idProduct);
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if(!data){
@@ -27,6 +28,10 @@ static int gaomon_probe(struct usb_interface *interface, const struct usb_device
         printk(KERN_ALERT "Unable to register this driver. Not able to get a minor for this device. Error code %d\n", error_code);
         return error_code;
     }
+
+	dev_info(&interface->dev,
+		 "USB Skeleton device now attached to USBSkel-%d",
+		 interface->minor);
     
     return error_code;
 }  

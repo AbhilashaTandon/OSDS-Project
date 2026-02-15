@@ -78,7 +78,7 @@ static void gaomon_free(struct kref *kref);
 
 struct usb_driver gaomon_udriver = 
 {
-	.name = "gaomon",
+	.name = DRIVER_NAME,
     .probe = gaomon_probe,
     .disconnect = gaomon_disconnect,
     .id_table = id_list,
@@ -86,7 +86,7 @@ struct usb_driver gaomon_udriver =
 
 
 static struct usb_class_driver gaomon_class = {
-    .name = "gaomon%d",
+    .name = DRIVER_NAME "%d",
     .fops = &fops,
 	.minor_base = MINOR_BASE,
 };

@@ -1,4 +1,4 @@
-obj-m += usb_spoof.o
+obj-m += usb_driver.o
 
 PWD := $(CURDIR)
 

@@ -4,7 +4,6 @@
 #include "global.h"
 #include "fops.h"
 
-
 static int gaomon_probe(struct usb_interface *interface, const struct usb_device_id *device_id){
 	struct gaomon_data *data;
 	printk(KERN_INFO "usb device (%04X:%04X) plugged\n", device_id->idVendor, device_id->idProduct);

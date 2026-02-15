@@ -2,7 +2,6 @@
 #include "fops.h"
 
 static int __init gaomon_driver_init(void){
-	struct gaomon_data *data;
 
 	pr_info("Hello, world!\n");
 
@@ -31,6 +30,13 @@ static int __init gaomon_driver_init(void){
 	printk(KERN_INFO "the driver, create a dev file with\n");
 	printk(KERN_INFO "'mknod /dev/%s c %d %d'.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no); printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n"); printk(KERN_INFO "the device file.\n");
 	printk(KERN_INFO "Remove the device file and module when done.\n");
+
+	ret = usb_register(&gaomon_udriver);
+	if(ret < 0){
+		printk(KERN_ALERT "usb_register failed for the "__FILE__ "driver."
+			"Error number %d", ret);
+		return -1;
+	}
 
 	return usb_register(&gaomon_udriver);
 }

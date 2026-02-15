@@ -6,12 +6,22 @@
 
 
 static int gaomon_probe(struct usb_interface *interface, const struct usb_device_id *device_id){
+	struct gaomon_data *data;
+
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	if(!data){
+		//always check for null ptr
+		return -ENOMEM;
+	}
+
+	kref_init(&(data->kref));
+
     int error_code;
     
-    gaomon_udev = usb_get_dev(interface_to_usbdev(gaomon_uinterface));
-    gaomon_uinterface = usb_get_intf(gaomon_uinterface);
+    data->udev = usb_get_dev(interface_to_usbdev(interface));
+    data->uintf = usb_get_intf(interface);
 
-    error_code = usb_register_dev(gaomon_uinterface, &gaomon_class);
+    error_code = usb_register_dev(interface, &gaomon_class);
 
     if(error_code) {
         printk(KERN_ALERT "Unable to register this driver. Not able to get a minor for this device. Error code %d\n", error_code);
@@ -22,7 +32,7 @@ static int gaomon_probe(struct usb_interface *interface, const struct usb_device
 }  
 
 static void gaomon_disconnect(struct usb_interface *interface){
-    usb_deregister_dev(gaomon_uinterface, &gaomon_class);
+    usb_deregister_dev(interface, &gaomon_class);
 }
 
 #endif

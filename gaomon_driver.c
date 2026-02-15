@@ -38,7 +38,7 @@ static int __init gaomon_driver_init(void){
 		return -1;
 	}
 
-	return usb_register(&gaomon_udriver);
+	return 0; 
 }
 static void __exit gaomon_driver_exit(void){
 	printk(KERN_INFO "Goodbye!");

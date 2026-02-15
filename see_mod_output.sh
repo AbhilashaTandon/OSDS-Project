@@ -1,3 +1,3 @@
-sudo insmod usb_spoof.ko
-sudo rmmod usb_spoof.ko
-sudo dmesg
+sudo insmod usb_driver.ko
+sudo rmmod usb_driver.ko
+sudo dmesg | tail -10

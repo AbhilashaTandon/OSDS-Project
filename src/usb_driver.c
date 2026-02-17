@@ -4,6 +4,8 @@
 #define VENDOR_ID  0x256c
 #define PRODUCT_ID 0x006e
 
+// gaomon: vendorid=256c productid=006e
+
 static struct usb_device_id my_id_table[] = {
 	{USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
 	{},
@@ -11,7 +13,7 @@ static struct usb_device_id my_id_table[] = {
 MODULE_DEVICE_TABLE(usb, my_id_table);
 
 static int my_usb_probe(struct usb_interface *intf, const struct usb_device_id *id){
-//second argument points to entry in my_id_table
+	//second argument points to entry in my_id_table
 	printk(KERN_INFO "%s - usb probe function\n", DRIVER_NAME);
 	return 0;
 }
@@ -39,6 +41,7 @@ static int __init usb_driver_init(void){
 		return -retval;
 	}
 
+	printk(KERN_INFO "%s - USB driver registered successfully!.\n", DRIVER_NAME); 
 	return 0;
 }
 

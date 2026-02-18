@@ -1,4 +1,4 @@
-#include "usb_driver.h"
+#include "gaomon_driver.h"
 #include <linux/usb.h>
 
 #define VENDOR_ID  0x256c

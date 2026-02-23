@@ -1,5 +1,5 @@
-obj-m += gaomondriver.o
-gaomondriver-y := main.o fops.o usb_driver.o
+obj-m += gaomon_driver.o
+gaomon_driver-y := main.o fops.o usb_driver.o
 
 PWD := $(CURDIR)
 

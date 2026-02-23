@@ -44,7 +44,7 @@ MODULE_DEVICE_TABLE(usb, gaomon_id_table);
 
 //fops methods
 
- int gaomon_open(struct inode *, struct file *);
+int gaomon_open(struct inode *, struct file *);
 int gaomon_release(struct inode *, struct file *);
 ssize_t gaomon_read(struct file *, char __user *, size_t, loff_t *);
 ssize_t gaomon_write(struct file *, const char __user *, size_t, loff_t *);
@@ -59,8 +59,8 @@ static struct file_operations gaomon_fops = {
 
 //usb driver methods
 
-static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id);
-static void gaomon_disconnect(struct usb_interface *intf);
+int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id);
+void gaomon_disconnect(struct usb_interface *intf);
 
 static struct usb_driver gaomon_driver = {
 	.name = "%s",
@@ -69,11 +69,17 @@ static struct usb_driver gaomon_driver = {
 	.disconnect = gaomon_disconnect,
 };
 
+static struct usb_class_driver gaomon_class_driver = {
+	.name =		"gaomon%d",
+	.fops =		&gaomon_fops,
+	.minor_base =	MINOR_BASE,
+};
+
 //global struct
 
 struct gaomon_data{
 	struct usb_device *udev;
-	struct usb_interface uintf;
+	struct usb_interface *uintf;
 
 	//buffer stuff
 	struct urb *urb_buffer;

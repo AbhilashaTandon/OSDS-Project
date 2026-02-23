@@ -38,15 +38,18 @@ ssize_t gaomon_read(struct file *filp, char __user *ext_buffer, size_t count, lo
 	//TODO: add mutex lock around this section
 	size_t leftover_space = data->buffer_size - data->buffer_usage;
 	if(leftover_space < count){
+		printk(KERN_ALERT "%s - Error, not enough space in user space buffer.\n", DRIVER_NAME);
 		return 0;
 	}
 
 	if (copy_to_user(ext_buffer,
 				data->buffer + data->buffer_usage,
 				count)){
+		printk(KERN_ALERT "%s - Error copying data to user space.\n", DRIVER_NAME);
 		return -EFAULT;
 	}
 	else{
+		printk(KERN_INFO "%s - Currently reading %d bytes from usb device.\n", DRIVER_NAME, count);
 		return count;
 	}
 }

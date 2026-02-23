@@ -28,6 +28,8 @@ int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id){
 		return retval;
 	}
 
+	printk(KERN_INFO, "%s - Successfully probed usb device.\n", DRIVER_NAME);
+
 	return 0;
 }
 
@@ -37,4 +39,7 @@ void gaomon_disconnect(struct usb_interface *intf){
 	kfree(data);
 
 	usb_deregister_dev(intf, &gaomon_class_driver);
+
+
+	printk(KERN_INFO, "%s - Successfully disconnected from usb device.\n", DRIVER_NAME);
 }

@@ -44,10 +44,10 @@ MODULE_DEVICE_TABLE(usb, gaomon_id_table);
 
 //fops methods
 
-static int gaomon_open(struct inode *, struct file *);
-static int gaomon_release(struct inode *, struct file *);
-static ssize_t gaomon_read(struct file *, char __user *, size_t, loff_t *);
-static ssize_t gaomon_write(struct file *, const char __user *, size_t, loff_t *);
+ int gaomon_open(struct inode *, struct file *);
+int gaomon_release(struct inode *, struct file *);
+ssize_t gaomon_read(struct file *, char __user *, size_t, loff_t *);
+ssize_t gaomon_write(struct file *, const char __user *, size_t, loff_t *);
 
 static struct file_operations gaomon_fops = {
 	.read = gaomon_read,

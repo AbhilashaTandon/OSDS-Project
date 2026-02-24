@@ -43,14 +43,14 @@ static struct class *gaomon_class;
 static int gaomon_major_no; /* major number assigned to our device driver */
 static int gaomon_minor_no; /* minor number assigned to our device driver */
 
-enum {
-	CDEV_NOT_USED,
-	CDEV_EXCLUSIVE_OPEN,
+struct gaomon_data{
+	struct usb_device *udev;
+	struct usb_interface *uintf;
+	struct urb *urb;
+	unsigned char *buffer;
+	size_t buffer_size;
+	size_t buffer_usage; 
+	__u8 input_endpoint;
 };
-
-/* Is device open? Used to prevent multiple access to device */
-static atomic_t already_open = ATOMIC_INIT(CDEV_NOT_USED);
-
-static char msg[BUF_LEN + 1]; /* The msg the device will give when asked */
 
 #endif

@@ -30,7 +30,39 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 	//second argument points to entry in my_id_table
 	printk(KERN_INFO "%s - usb probe function\n", DRIVER_NAME);
 
+	struct gaomon_data *data;
+	struct usb_endpoint_descriptor *input;
+
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	if(!data){
+		printk(KERN_ALERT "%s - Error: could not allocate memory for global data.\n", DRIVER_NAME);
+	}
+
+	data->udev = usb_get_dev(interface_to_usbdev(intf));
+	data->uintf = usb_get_intf(intf);
+
 	int error_code;
+
+	error_code = usb_find_common_endpoints(intf->cur_altsetting,
+			NULL, NULL, &input, NULL);
+
+	if(error_code){
+		printk(KERN_ALERT "%s - Error: could not find input interrupt endpoint.\n", DRIVER_NAME);
+	}
+
+	data->buffer_size = usb_endpoint_maxp(input);
+	data->input_endpoint = input->bEndpointAddress;
+	data->buffer = kmalloc(data->buffer_size, GFP_KERNEL);
+	if (!data->buffer) {
+		return -ENOMEM;
+	}
+	data->urb = usb_alloc_urb(0, GFP_KERNEL);
+	if (!data->urb) {
+		return -ENOMEM;
+	}
+
+	/* save our data pointer in this interface device */
+	usb_set_intfdata(intf, data);
 
 	error_code = usb_register_dev(intf, &gaomon_class_driver);
 
@@ -50,7 +82,17 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 
 static void gaomon_disconnect(struct usb_interface *intf){
 	printk(KERN_INFO "%s - usb disconnect function\n", DRIVER_NAME);
+
 	usb_deregister_dev(intf, &gaomon_class_driver);
+
+	struct gaomon_data *data;
+
+	data = usb_get_intfdata(intf);
+
+	usb_free_urb(data->urb);
+	kfree(data->buffer);
+	kfree(data);
+
 }
 
 static struct usb_driver gaomon_driver = {

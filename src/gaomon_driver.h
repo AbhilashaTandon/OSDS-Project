@@ -35,8 +35,6 @@ static void gaomon_disconnect(struct usb_interface *intf);
 static int __init gaomon_driver_init(void);
 static void __exit gaomon_driver_exit(void);
 
-static struct class *gaomon_class;
-
 static int gaomon_major_no; /* major number assigned to our device driver */
 static int gaomon_minor_no; /* minor number assigned to our device driver */
 
@@ -64,6 +62,8 @@ static struct usb_device_id gaomon_id_table[] = {
 static struct file_operations gaomon_fops = {
 	.read = gaomon_read,
 	.write = gaomon_write,
+	.open = gaomon_open,
+	.release = gaomon_release,
 	.owner = THIS_MODULE,
 };
 
@@ -77,7 +77,7 @@ MODULE_DEVICE_TABLE(usb, gaomon_id_table);
 
 
 static struct usb_driver gaomon_driver = {
-	.name = "%s",
+	.name = DRIVER_NAME,
 	.id_table = gaomon_id_table,
 	.probe = gaomon_probe,
 	.disconnect = gaomon_disconnect,

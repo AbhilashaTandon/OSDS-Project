@@ -74,26 +74,89 @@ static void gaomon_disconnect(struct usb_interface *intf){
 
 //FOPS METHODS
 
+static int gaomon_open(struct inode *inode, struct file *filp){
+
+	struct gaomon_data *data;
+	struct usb_interface *intf;
+	int subminor;
+
+	subminor = iminor(inode);
+
+	intf = usb_find_interface(&gaomon_driver, subminor);
+	if (!intf) {
+		pr_err("%s - Error: can't find device for minor %d\n",
+				DRIVER_NAME, subminor);
+		return  -ENODEV;
+	}
+
+	data = usb_get_intfdata(intf);
+	if (!data) {
+		return -ENODEV;
+	}
+
+	int error_code = usb_autopm_get_interface(intf);
+
+	if(!error_code){
+		return error_code;
+	}
+
+	//TODO: add ref counting like usb_skeleton.c
+
+	/* save our object in the file's private structure */
+	filp->private_data = data;
+
+	return 0;
+}
+
+static int gaomon_release(struct inode *inode, struct file *filp){
+
+	struct gaomon_data *data;
+
+	data = filp->private_data;
+	if(data == NULL){
+		return -ENODEV;
+	}
+
+	usb_autopm_put_interface(data->uintf);
+	//TODO: add ref counting like usb_skeleton.c
+
+	return 0;
+}
+
 static ssize_t gaomon_read(struct file *file, char *buffer, size_t count, loff_t *ppos){
 	if(buffer == NULL){
 		return 0;
 	}
 
-	unsigned char *user_buffer = kzalloc(count, GFP_KERNEL);
+	if(count == 0){
+		return 0;
+	}
 
-	if(copy_to_user(buffer, user_buffer, count)){
-		printk(KERN_ALERT "%s - Error: not enough memory to read from USB", DRIVER_NAME);
-		kfree(user_buffer);
+	struct gaomon_data *data;
+
+	data = file->private_data;
+	if(data == NULL){
+		printk(KERN_ALERT "%s - Error: global data not saved to device file.\n", DRIVER_NAME);
 		return -EFAULT;
 	}
-	else{
-		for(unsigned int i = 0; i < (count < 256 ? count : 256); i++){
-			printk(KERN_INFO "%s - %d: %d", DRIVER_NAME, i, *(user_buffer + i));
-		}
 
-		kfree(user_buffer);
-		return count;
+	//TODO: add concurrency stuff here later
+	//we need to make sure there aren't ongoing reads while this is happening 
+
+	size_t available_space = data->buffer_size - data->buffer_usage;
+	size_t read_size = available_space < count ? available_space : count; //min
+	if(read_size == 0){
+		printk(KERN_ALERT "%s - Error: buffer is full.\n", DRIVER_NAME);
+		return -EFAULT;
 	}
+
+	if(copy_to_user(buffer, data->buffer + data->buffer_usage, read_size)){
+		printk(KERN_ALERT "%s - Error: could not copy to user space.\n", DRIVER_NAME);
+		return -EFAULT;
+	}
+	data->buffer_usage += read_size;
+
+	return read_size;
 }
 
 static ssize_t gaomon_write(struct file *filp, const char __user *buff,size_t len, loff_t *off){
@@ -107,10 +170,10 @@ static ssize_t gaomon_write(struct file *filp, const char __user *buff,size_t le
 static int __init gaomon_driver_init(void){
 	printk(KERN_INFO "%s - Hello!", DRIVER_NAME);
 
-	int retval;
-	if ((retval = alloc_chrdev_region(&gaomon_device, MINOR_BASE, 1,DRIVER_NAME)) < 0)	{
-		printk(KERN_ALERT "%s - Error during allocating region. Error code %d.\n", DRIVER_NAME, retval);
-		return retval;
+	int error_code;
+	if ((error_code = alloc_chrdev_region(&gaomon_device, MINOR_BASE, 1,DRIVER_NAME)) < 0)	{
+		printk(KERN_ALERT "%s - Error during allocating region. Error code %d.\n", DRIVER_NAME, error_code);
+		return error_code;
 	}
 
 	gaomon_major_no = MAJOR(gaomon_device);
@@ -123,18 +186,18 @@ static int __init gaomon_driver_init(void){
 	printk(KERN_INFO "Remove the device file and module when done.\n");
 
 	cdev_init(&gaomon_char_device, &gaomon_fops);
-	retval = cdev_add(&gaomon_char_device, gaomon_device, 1);
+	error_code = cdev_add(&gaomon_char_device, gaomon_device, 1);
 
-	if(retval){
+	if(error_code){
 		printk(KERN_ALERT "Error registering char driver.\n");
-		return retval;
+		return error_code;
 	}
 
-	retval = usb_register(&gaomon_driver);
+	error_code = usb_register(&gaomon_driver);
 
-	if(retval){
-		printk(KERN_ALERT "%s - Error during register. Error code %d.\n", DRIVER_NAME, retval);
-		return retval;
+	if(error_code){
+		printk(KERN_ALERT "%s - Error during register. Error code %d.\n", DRIVER_NAME, error_code);
+		return error_code;
 	}
 
 	printk(KERN_INFO "%s - USB driver registered successfully!.\n", DRIVER_NAME); 

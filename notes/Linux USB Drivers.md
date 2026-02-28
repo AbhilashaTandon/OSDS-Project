@@ -74,7 +74,8 @@ We have a lot of structs to keep track of so It's probably helpful to give them 
 ## `struct usb_device` (AKA "Devon")
 - The kernel's representation of a USB device
 - Some useful attributes
-	```c
+
+```c
 int devnum; // device number; address on a USB bus
 enum usb_device_state state; // device state: configured, not attached, etc.
 //Usbcore drivers should not set usbdev->state directly.  Instead use usb_set_device_state().
@@ -88,7 +89,8 @@ struct usb_host_config *actconfig; // the active configuration
 struct usb_host_endpoint *ep_in[16]; // array of IN endpoints
 struct usb_host_endpoint *ep_out[16]; // array of OUT endpoints
 struct usb_device *parent; // usb hub unless root
-	```
+```
+
 - The following code snippet can be used to access all of the configs, interfaces, and endpoints of a device:
 
 ```c
@@ -111,7 +113,7 @@ for (i = 0; i < dev -> descriptor.bNumConfigurations; i++) {
 
 ## `struct usb_driver` (AKA )
 - identifies USB interface driver to usbcore
-- Useful attributes
+- Useful attributes:
 ```c
 	const char *name; //self explanatory
     int (*probe) (struct usb_interface *intf, const struct usb_device_id *id); /* Called to see if the driver is willing to manage a particular interface on a device. If it is, probe returns zero and uses usb_set_intfdata() to associate driver-specific data with the interface. It may also use usb_set_interface() to specify the appropriate altsetting. If unwilling to manage the interface, return -ENODEV, if genuine IO errors occurred, an appropriate negative errno value. */
@@ -123,16 +125,58 @@ for (i = 0; i < dev -> descriptor.bNumConfigurations; i++) {
     unsigned int supports_autosuspend:1;
 ```
 
-## `struct usb_host_config`
-## `struct usb_device_driver`
-## `struct usb_class_driver`
-## `struct urb`
-## `struct usb_anchor`
-## `struct usb_device_id`
 ## `struct file_operations` (AKA "fops")
-## `struct usb_endpoint_descriptor`
 ## `struct usb_interface`
 - what usb device drivers talk to
 
 
+# URBs
 
+A URB is a package of data sent to the device to execute some kind of transaction (i.e. to send or receive data). The way this works is strangely Javascript like. Submitting a URB request is an inherently asynchronous operation to which you have to prove a callback function ("completion handler"). 
+
+Creating and freeing URBs are done with the following two functions.
+```c
+struct urb *usb_alloc_urb(int isoframes, int mem_flags);
+void usb_free_urb(struct urb *urb);
+```
+
+`isoframes` should be set to 0 for interrupt endpoints. The `mem_flags` holds memory allocation flags `GFP_KERNEL` is one of them I think so I'll try using that. 
+
+For our purposes, we need to use the `usb_fill_int_urb()` method to initialize the URB before submitting it.
+
+```c
+void usb_fill_int_urb(struct urb *urb, struct usb_device *dev, unsigned int pipe, void *transfer_buffer, int buffer_length, usb_complete_t complete_fn, void *context, int interval);
+```
+
+The transfer buffer needs to be read and written to with DMA, which means we need to allocate it with `kmalloc()`. It's risky to embed this buffer in a larger structure, so I may not want to do what `usb_skeleton.c` does.
+`complete_fn` is our callback function. The `pipe` argument is very important here, this holds the information of whatever endpoint we're accessing. For my purposes I need the `usb_rcvintpipe()` macro to construct it. It holds the endpoint number, direction, type, and some other stuff. But we only need to supply it the `usb_device` struct and an endpoint address. 
+
+
+To actually submit a URB, we call the following function
+```c
+int usb_submit_urb(struct urb *urb, int mem_flags);
+```
+
+Since the URB submissions are asynchronous, this immediately returns, giving back 0 or some error code. Use the following two functions to cancel a URB, the first one for asynchronous cancellations and the second for synchronous ones.
+```c
+int usb_unlink_urb(struct urb *urb);
+void usb_kill_urb(struct urb *urb);
+```
+
+There's some concurrency troubles with these, I will just copy in something straight from the kernel documentation.
+
+```
+There is a lifetime issue to consider. An URB may complete at any time, and the completion handler may free the URB. If this happens while usb_unlink_urb() or usb_kill_urb() is running, it will cause a memory-access violation. The driver is responsible for avoiding this, which often means some sort of lock will be needed to prevent the URB from being deallocated while it is still in use.
+
+On the other hand, since usb_unlink_urb may end up calling the completion handler, the handler must not take any lock that is held when usb_unlink_urb is invoked. The general solution to this problem is to increment the URB’s reference count while holding the lock, then drop the lock and call usb_unlink_urb or usb_kill_urb, and then decrement the URB’s reference count. You increment the reference count by calling :c:func`usb_get_urb`:
+
+struct urb *usb_get_urb(struct urb *urb)
+
+(ignore the return value; it is the same as the argument) and decrement the reference count by calling usb_free_urb(). Of course, none of this is necessary if there’s no danger of the URB being freed by the completion handler.
+```
+
+## Interrupt Transfers
+
+Interrupt transfers happen periodically with intervals that are some unit of time times a power of 2. We can specify an interval in the `usb_fill_int_urb()` macro, and the submission function will round that down to the nearest valid interval time.
+
+Unfortunately, URBs have to be manually restarted on completion, so we need to resubmit them in the completion handler. 

@@ -10,4 +10,4 @@
 *.order
 *.mod.c
 notes.md
-
+src/log.txt

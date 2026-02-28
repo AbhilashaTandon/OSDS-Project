@@ -1,4 +1,4 @@
-obj-m += gaomon_driver.o
+obj-m := gaomon_driver.o
 
 PWD := $(CURDIR)
 

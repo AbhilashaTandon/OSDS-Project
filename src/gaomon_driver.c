@@ -1,30 +1,7 @@
 #include "gaomon_driver.h"
 #include <linux/usb.h>
 
-#define VENDOR_ID  0x256c
-#define PRODUCT_ID 0x006e
-#define MINOR_BASE 192
-
-// gaomon: vendorid=256c productid=006e
-
-static struct usb_device_id gaomon_id_table[] = {
-	{USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
-	{},
-};
-
-static struct file_operations gaomon_fops = {
-	.read = gaomon_read,
-	.write = gaomon_write,
-	.owner = THIS_MODULE,
-};
-
-static struct usb_class_driver gaomon_class_driver = {
-	.name =		"gaomon%d",
-	.fops =		&gaomon_fops,
-	.minor_base =	MINOR_BASE,
-};
-
-MODULE_DEVICE_TABLE(usb, gaomon_id_table);
+//USB METHODS
 
 static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id){
 	//second argument points to entry in my_id_table
@@ -95,12 +72,7 @@ static void gaomon_disconnect(struct usb_interface *intf){
 
 }
 
-static struct usb_driver gaomon_driver = {
-	.name = "%s",
-	.id_table = gaomon_id_table,
-	.probe = gaomon_probe,
-	.disconnect = gaomon_disconnect,
-};
+//FOPS METHODS
 
 static ssize_t gaomon_read(struct file *file, char *buffer, size_t count, loff_t *ppos){
 	if(buffer == NULL){
@@ -128,6 +100,8 @@ static ssize_t gaomon_write(struct file *filp, const char __user *buff,size_t le
 	pr_alert("Sorry, this operation is not supported.\n");
 	return -EINVAL;
 }
+
+//INIT AND EXIT METHODS
 
 
 static int __init gaomon_driver_init(void){

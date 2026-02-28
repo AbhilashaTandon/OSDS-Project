@@ -50,7 +50,7 @@ struct gaomon_data{
 
 #define VENDOR_ID  0x256c
 #define PRODUCT_ID 0x006e
-#define MINOR_BASE 192
+#define MINOR_BASE 0
 
 // gaomon: vendorid=256c productid=006e
 

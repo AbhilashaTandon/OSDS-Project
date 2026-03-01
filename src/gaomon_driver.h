@@ -29,6 +29,8 @@ static int gaomon_release(struct inode *, struct file *);
 static ssize_t gaomon_read(struct file *, char __user *, size_t, loff_t *);
 static ssize_t gaomon_write(struct file *, const char __user *, size_t, loff_t *);
 
+
+
 static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id);
 static void gaomon_disconnect(struct usb_interface *intf);
 
@@ -47,6 +49,10 @@ struct gaomon_data{
 	size_t buffer_usage; 
 	__u8 input_endpoint;
 };
+
+
+void cleanup(struct usb_interface *, const struct usb_device_id *, struct gaomon_data *);
+//deallocates data if probe fails
 
 #define VENDOR_ID  0x256c
 #define PRODUCT_ID 0x006e

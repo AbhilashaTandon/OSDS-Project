@@ -5,7 +5,7 @@
 
 void cleanup(struct usb_interface *intf, const struct usb_device_id *id, struct gaomon_data *data){
 	//free in reverse order
-	
+
 	pr_info("%s - Freeing allocations\n", DRIVER_NAME);
 	if(data->urb){
 		usb_free_urb(data->urb);
@@ -45,7 +45,7 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 	//TODO: figure out how to get the other endpoint
 
 	if(error_code){
-		pr_alert("%s - Error: could not find input interrupt endpoint.\n", DRIVER_NAME);
+		pr_alert("%s - Error: could not find input interrupt endpoint. Error code %d.\n", DRIVER_NAME, error_code);
 		return error_code;
 	}
 
@@ -55,10 +55,12 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 	data->buffer = kzalloc(data->buffer_size, GFP_KERNEL);
 	if (!data->buffer) {
 		cleanup(intf, id, data);
+		pr_alert("%s - Error: could not allocate space for data buffer.\n", DRIVER_NAME);
 		return -ENOMEM;
 	}
 	data->urb = usb_alloc_urb(0, GFP_KERNEL);
 	if (!data->urb) {
+		pr_alert("%s - Error: could not allocate space for urb.\n", DRIVER_NAME);
 		cleanup(intf, id, data);
 		return -ENOMEM;
 	}
@@ -115,14 +117,18 @@ static int gaomon_open(struct inode *inode, struct file *filp){
 
 	data = usb_get_intfdata(intf);
 	if (!data) {
+		pr_err ("%s - Can't get data from interface.\n",
+				DRIVER_NAME );
 		return -ENODEV;
 	}
 
-	int error_code = usb_autopm_get_interface(intf);
+	//int error_code = usb_autopm_get_interface(intf);
+	// this function is used for autosuspend/resume so I should only use it after I've implemented those
 
-	if(error_code){
-		return error_code;
-	}
+	//if(error_code){
+		//pr_err ("%s - Error getting interface. Error code %d.\n", DRIVER_NAME, error_code);
+		//return error_code;
+	//}
 
 	/* save our object in the file's private structure */
 	filp->private_data = data;
@@ -136,6 +142,7 @@ static int gaomon_release(struct inode *inode, struct file *filp){
 
 	data = filp->private_data;
 	if(data == NULL){
+		pr_err ("%s - Global data stored in file is null pointer.\n", DRIVER_NAME);
 		return -ENODEV;
 	}
 
@@ -214,6 +221,7 @@ static ssize_t gaomon_read(struct file *file, char __user *buffer, size_t count,
 			if(!available_space){
 				error_code = gaomon_read_irq(data, count);
 				if(error_code < 0){
+					pr_alert( "%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
 					return error_code;
 				}
 				else{
@@ -240,6 +248,7 @@ static ssize_t gaomon_read(struct file *file, char __user *buffer, size_t count,
 		else{
 			error_code = gaomon_read_irq(data, count);
 			if(error_code < 0){
+					pr_alert( "%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
 				return error_code;
 			}
 			else{
@@ -283,7 +292,7 @@ static int __init gaomon_driver_init(void){
 	error_code = cdev_add(&gaomon_char_device, gaomon_device, 1);
 
 	if(error_code){
-		pr_alert("Error registering char driver.\n");
+		pr_alert("%s - Error registering char driver. Error code %d.\n", DRIVER_NAME, error_code);
 		return error_code;
 	}
 

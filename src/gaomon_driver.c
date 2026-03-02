@@ -56,8 +56,7 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 			DRIVER_NAME, input->bEndpointAddress, interval_length);
 	}
 
-	data->buffer_size = usb_endpoint_maxp(input) * 8;
-	//allow us to store 8 packages
+	data->buffer_size = BUF_LEN;
 	data->input_endpoint = input;
 	data->buffer = kzalloc(data->buffer_size, GFP_KERNEL);
 	if (!data->buffer) {
@@ -159,6 +158,9 @@ static int gaomon_release(struct inode *inode, struct file *filp){
 }
 
 static void gaomon_irq_callback(struct urb *urb){
+
+	pr_info("%s - Running urb irq callback function.\n");
+
 	struct gaomon_data *data;
 
 	data = urb->context;
@@ -181,13 +183,12 @@ static int gaomon_read_irq(struct gaomon_data *data, size_t count){
 	}
 
 	pr_info("%s - Reading from endpoint at 0x%x.\n", DRIVER_NAME, data->input_endpoint->bEndpointAddress);
-	pr_info("%s - It has a max packet size of %d,\n", DRIVER_NAME, data->input_endpoint->wMaxPacketSize);
+	pr_info("%s - It has a max packet size of %d.\n", DRIVER_NAME, data->input_endpoint->wMaxPacketSize);
 
-	unsigned int pipe = usb_rcvintpipe(data->udev, data->input_endpoint);
+	unsigned int pipe = usb_rcvintpipe(data->udev, data->input_endpoint->bEndpointAddress);
 	
 	if(error_code = usb_pipe_type_check(data->udev, pipe))
 		pr_err("%s - Error: pipe has invalid format. Error code %d.\n", DRIVER_NAME, error_code);
-
 
 	usb_fill_int_urb(data->urb, 
 			data->udev, 

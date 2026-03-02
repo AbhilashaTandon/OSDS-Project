@@ -21,7 +21,7 @@
 #include <linux/usb.h>
 #include <linux/version.h>
 #define DRIVER_NAME "gaomon_driver"
-#define BUF_LEN 80 /* Max length of the message from the device */
+#define BUF_LEN 1024 /* Max length of the message from the device */
 
 static unsigned int gaomon_device;
 static struct cdev gaomon_char_device;

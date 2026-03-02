@@ -5,6 +5,8 @@
 
 void cleanup(struct usb_interface *intf, const struct usb_device_id *id, struct gaomon_data *data){
 	//free in reverse order
+	
+	pr_info("%s - Freeing allocations\n", DRIVER_NAME);
 	if(data->urb){
 		usb_free_urb(data->urb);
 	}
@@ -22,7 +24,7 @@ void cleanup(struct usb_interface *intf, const struct usb_device_id *id, struct 
 
 static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id){
 	//second argument points to entry in my_id_table
-	pr_info("%s - usb probe function\n", DRIVER_NAME);
+	pr_info("%s - Probing device\n", DRIVER_NAME);
 
 	struct gaomon_data *data;
 	struct usb_endpoint_descriptor *input;
@@ -96,6 +98,7 @@ static void gaomon_disconnect(struct usb_interface *intf){
 //FOPS METHODS
 
 static int gaomon_open(struct inode *inode, struct file *filp){
+	pr_info("%s - Opening device file.\n", DRIVER_NAME);
 
 	struct gaomon_data *data;
 	struct usb_interface *intf;
@@ -137,12 +140,54 @@ static int gaomon_release(struct inode *inode, struct file *filp){
 	}
 
 	usb_autopm_put_interface(data->uintf);
-	//TODO: add ref counting like usb_skeleton.c
 
 	return 0;
 }
 
+static void gaomon_irq_callback(struct urb *urb){
+	struct gaomon_data *data;
+
+	data = urb->context;
+
+	if(urb->status){
+		pr_alert("%s - error preparing urb read %d\n", DRIVER_NAME, urb->status);
+	}
+
+	data->buffer_usage = urb->actual_length;
+
+	//I think I need to resubmit the urb here since im using interrupts
+	//TODO: add concurrency 
+}
+
+static int gaomon_read_irq(struct gaomon_data *data, size_t count){
+	int error_code = 0;
+
+	usb_fill_int_urb(data->urb, 
+			data->udev, 
+			usb_rcvintpipe(data->udev, 
+				data->input_endpoint), 
+			data->buffer, 
+			min(data->buffer_size, count),
+			gaomon_irq_callback, 
+			data, 2000); //last argument is interval measured in microseconds
+
+	data->buffer_usage = 0;
+
+	error_code = usb_submit_urb(data->urb, GFP_KERNEL);
+	if(error_code < 0){
+		pr_err("%s - Failed submitting read urb, error %d\n", DRIVER_NAME, error_code);
+	}
+
+	return error_code;
+
+}
+//prepares a urb and submits it
+
 static ssize_t gaomon_read(struct file *file, char __user *buffer, size_t count, loff_t *ppos){
+
+	pr_info("%s - Reading %d bytes from device.\n", DRIVER_NAME, count);
+
+	int error_code = 0;
 	if(buffer == NULL){
 		return 0;
 	}
@@ -162,20 +207,48 @@ static ssize_t gaomon_read(struct file *file, char __user *buffer, size_t count,
 	//TODO: add concurrency stuff here later
 	//we need to make sure there aren't ongoing reads while this is happening 
 
-	size_t available_space = data->buffer_size - data->buffer_usage;
-	size_t read_size = available_space < count ? available_space : count; //min
-	if(read_size == 0){
-		pr_alert( "%s - Error: buffer is full.\n", DRIVER_NAME);
-		return -EFAULT;
+	while(true){
+		if(data->buffer_usage){
+			size_t available_space = data->buffer_size - data->buffer_usage;
+			size_t read_size = min(available_space, count); 
+			if(!available_space){
+				error_code = gaomon_read_irq(data, count);
+				if(error_code < 0){
+					return error_code;
+				}
+				else{
+					continue;
+				}
+				//else try again
+			}
+
+			if(read_size == 0){
+				pr_alert( "%s - Error: buffer is full.\n", DRIVER_NAME);
+				return -EFAULT;
+			}
+
+			if(copy_to_user(buffer, data->buffer + data->buffer_usage, read_size)){
+				pr_alert("%s - Error: could not copy to user space.\n", DRIVER_NAME);
+				return -EFAULT;
+			}
+			data->buffer_usage += read_size;
+
+			if(available_space < count){
+				gaomon_read_irq(data, count - read_size);
+			}
+		}
+		else{
+			error_code = gaomon_read_irq(data, count);
+			if(error_code < 0){
+				return error_code;
+			}
+			else{
+				continue;
+			}
+		}
 	}
 
-	if(copy_to_user(buffer, data->buffer + data->buffer_usage, read_size)){
-		pr_alert("%s - Error: could not copy to user space.\n", DRIVER_NAME);
-		return -EFAULT;
-	}
-	data->buffer_usage += read_size;
-
-	return read_size;
+	return 0;
 }
 
 static ssize_t gaomon_write(struct file *filp, const char __user *buff,size_t len, loff_t *off){

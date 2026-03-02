@@ -1,6 +1,8 @@
 #ifndef USB_DRIVER_H
 #define USB_DRIVER_H
 
+#define min(x, y) ((x) < (y)) : (x) : (y)
+
 #include <asm/errno.h>
 #include <asm/uaccess.h> // needed for put_user
 #include <linux/atomic.h>
@@ -29,7 +31,11 @@ static int gaomon_release(struct inode *, struct file *);
 static ssize_t gaomon_read(struct file *, char __user *, size_t, loff_t *);
 static ssize_t gaomon_write(struct file *, const char __user *, size_t, loff_t *);
 
-
+//static int gaomon_read_irq(struct gaomon_data *, size_t );
+//prepares a urb and submits it
+//static void gaomon_irq_callback(struct urb *);
+//callback for urb creation
+//possibly need to resubmit here
 
 static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *id);
 static void gaomon_disconnect(struct usb_interface *intf);
@@ -49,7 +55,6 @@ struct gaomon_data{
 	size_t buffer_usage; 
 	__u8 input_endpoint;
 };
-
 
 void cleanup(struct usb_interface *, const struct usb_device_id *, struct gaomon_data *);
 //deallocates data if probe fails

@@ -53,7 +53,7 @@ struct gaomon_data{
 	unsigned char *buffer;
 	size_t buffer_size;
 	size_t buffer_usage; 
-	__u8 input_endpoint;
+	struct usb_endpoint_descriptor *input_endpoint;
 };
 
 void cleanup(struct usb_interface *, const struct usb_device_id *, struct gaomon_data *);

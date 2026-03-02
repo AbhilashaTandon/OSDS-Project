@@ -44,14 +44,21 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 			NULL, NULL, &input, NULL);
 	//TODO: figure out how to get the other endpoint
 
+	//print endpoint information
+
 	if(error_code){
 		pr_alert("%s - Error: could not find input interrupt endpoint. Error code %d.\n", DRIVER_NAME, error_code);
 		return error_code;
 	}
+	else{
+		unsigned int interval_length = usb_decode_interval(input, data->udev->speed);
+		pr_info("%s - Found endpoint at address %d. Operates at an interval of %dms.\n", 
+			DRIVER_NAME, input->bEndpointAddress, interval_length);
+	}
 
 	data->buffer_size = usb_endpoint_maxp(input) * 8;
 	//allow us to store 8 packages
-	data->input_endpoint = input->bEndpointAddress;
+	data->input_endpoint = input;
 	data->buffer = kzalloc(data->buffer_size, GFP_KERNEL);
 	if (!data->buffer) {
 		cleanup(intf, id, data);
@@ -126,8 +133,8 @@ static int gaomon_open(struct inode *inode, struct file *filp){
 	// this function is used for autosuspend/resume so I should only use it after I've implemented those
 
 	//if(error_code){
-		//pr_err ("%s - Error getting interface. Error code %d.\n", DRIVER_NAME, error_code);
-		//return error_code;
+	//pr_err ("%s - Error getting interface. Error code %d.\n", DRIVER_NAME, error_code);
+	//return error_code;
 	//}
 
 	/* save our object in the file's private structure */
@@ -169,16 +176,31 @@ static void gaomon_irq_callback(struct urb *urb){
 static int gaomon_read_irq(struct gaomon_data *data, size_t count){
 	int error_code = 0;
 
+	if(!(data->urb && data->udev && data->buffer && data->buffer_size)){
+		pr_err("%s - Error: a structure is unallocated.\n", DRIVER_NAME);
+	}
+
+	pr_info("%s - Reading from endpoint at 0x%x.\n", DRIVER_NAME, data->input_endpoint->bEndpointAddress);
+	pr_info("%s - It has a max packet size of %d,\n", DRIVER_NAME, data->input_endpoint->wMaxPacketSize);
+
+	unsigned int pipe = usb_rcvintpipe(data->udev, data->input_endpoint);
+	
+	if(error_code = usb_pipe_type_check(data->udev, pipe))
+		pr_err("%s - Error: pipe has invalid format. Error code %d.\n", DRIVER_NAME, error_code);
+
+
 	usb_fill_int_urb(data->urb, 
 			data->udev, 
-			usb_rcvintpipe(data->udev, 
-				data->input_endpoint), 
+			pipe,
 			data->buffer, 
 			min(data->buffer_size, count),
 			gaomon_irq_callback, 
-			data, 2000); //last argument is interval measured in microseconds
+			data, data->input_endpoint->bInterval); //last argument is interval measured in microseconds
 
 	data->buffer_usage = 0;
+
+	if(error_code = usb_urb_ep_type_check(data->urb))
+		pr_err("%s - Error: urb has invalid endpoint. Error code %d.\n", DRIVER_NAME, error_code);
 
 	error_code = usb_submit_urb(data->urb, GFP_KERNEL);
 	if(error_code < 0){
@@ -248,7 +270,7 @@ static ssize_t gaomon_read(struct file *file, char __user *buffer, size_t count,
 		else{
 			error_code = gaomon_read_irq(data, count);
 			if(error_code < 0){
-					pr_alert( "%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
+				pr_alert( "%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
 				return error_code;
 			}
 			else{

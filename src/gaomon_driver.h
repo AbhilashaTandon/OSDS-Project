@@ -52,8 +52,12 @@ struct gaomon_data{
 	struct urb *urb;
 	unsigned char *buffer;
 	size_t buffer_size;
+	size_t buffer_copying;
 	size_t buffer_usage; 
 	struct usb_endpoint_descriptor *input_endpoint;
+	spinlock_t err_lock;
+	struct mutex read_mutex;
+	bool disconnected;
 };
 
 void cleanup(struct usb_interface *, const struct usb_device_id *, struct gaomon_data *);

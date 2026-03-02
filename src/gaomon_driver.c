@@ -37,6 +37,8 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 
 	data->udev = usb_get_dev(interface_to_usbdev(intf));
 	data->uintf = usb_get_intf(intf);
+	mutex_init(&data->read_mutex);
+	spin_lock_init(&data->err_lock);
 
 	int error_code = 0;
 
@@ -53,7 +55,7 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 	else{
 		unsigned int interval_length = usb_decode_interval(input, data->udev->speed);
 		pr_info("%s - Found endpoint at address %d. Operates at an interval of %dms.\n", 
-			DRIVER_NAME, input->bEndpointAddress, interval_length);
+				DRIVER_NAME, input->bEndpointAddress, interval_length);
 	}
 
 	data->buffer_size = BUF_LEN;
@@ -70,7 +72,9 @@ static int gaomon_probe(struct usb_interface *intf, const struct usb_device_id *
 		cleanup(intf, id, data);
 		return -ENOMEM;
 	}
+
 	data->buffer_usage = 0;
+	data->buffer_copying = 0;
 
 	/* save our data pointer in this interface device */
 	usb_set_intfdata(intf, data);
@@ -97,6 +101,10 @@ static void gaomon_disconnect(struct usb_interface *intf){
 	struct gaomon_data *data;
 
 	data = usb_get_intfdata(intf);
+
+	mutex_lock(&data->read_mutex);
+	data->disconnected = 1;
+	mutex_unlock(&data->read_mutex);
 
 	usb_free_urb(data->urb);
 	kfree(data->buffer);
@@ -161,18 +169,24 @@ static void gaomon_irq_callback(struct urb *urb){
 
 	pr_info("%s - Running urb irq callback function.\n");
 
-	struct gaomon_data *data;
+	struct gaomon_data *data = urb->context;
+	unsigned long flags;
 
-	data = urb->context;
+	spin_lock_irqsave(&data->err_lock, flags);
+	//skeleton driver locks here so 
 
 	if(urb->status){
-		pr_alert("%s - error preparing urb read %d\n", DRIVER_NAME, urb->status);
+		pr_alert("%s - error in urb read %d\n", DRIVER_NAME, urb->status);
 	}
 
 	data->buffer_usage = urb->actual_length;
 
-	//I think I need to resubmit the urb here since im using interrupts
-	//TODO: add concurrency 
+	int error_code = usb_submit_urb(urb, GFP_ATOMIC);
+	if(error_code < 0){
+		pr_err("%s - Failed resubmitting read urb, error %d\n", DRIVER_NAME, error_code);
+	}
+
+	spin_unlock_irqrestore(&data->err_lock, flags);
 }
 
 static int gaomon_read_irq(struct gaomon_data *data, size_t count){
@@ -182,11 +196,16 @@ static int gaomon_read_irq(struct gaomon_data *data, size_t count){
 		pr_err("%s - Error: a structure is unallocated.\n", DRIVER_NAME);
 	}
 
+	if(data->urb->status == -EINPROGRESS){
+		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
+		return 0;
+	}
+
 	pr_info("%s - Reading from endpoint at 0x%x.\n", DRIVER_NAME, data->input_endpoint->bEndpointAddress);
 	pr_info("%s - It has a max packet size of %d.\n", DRIVER_NAME, data->input_endpoint->wMaxPacketSize);
 
 	unsigned int pipe = usb_rcvintpipe(data->udev, data->input_endpoint->bEndpointAddress);
-	
+
 	if(error_code = usb_pipe_type_check(data->udev, pipe))
 		pr_err("%s - Error: pipe has invalid format. Error code %d.\n", DRIVER_NAME, error_code);
 
@@ -199,11 +218,12 @@ static int gaomon_read_irq(struct gaomon_data *data, size_t count){
 			data, data->input_endpoint->bInterval); //last argument is interval measured in microseconds
 
 	data->buffer_usage = 0;
+	data->buffer_copying = 0;
 
 	if(error_code = usb_urb_ep_type_check(data->urb))
 		pr_err("%s - Error: urb has invalid endpoint. Error code %d.\n", DRIVER_NAME, error_code);
 
-	error_code = usb_submit_urb(data->urb, GFP_KERNEL);
+	error_code = usb_submit_urb(data->urb, GFP_ATOMIC);
 	if(error_code < 0){
 		pr_err("%s - Failed submitting read urb, error %d\n", DRIVER_NAME, error_code);
 	}
@@ -214,73 +234,101 @@ static int gaomon_read_irq(struct gaomon_data *data, size_t count){
 //prepares a urb and submits it
 
 static ssize_t gaomon_read(struct file *file, char __user *buffer, size_t count, loff_t *ppos){
-
 	pr_info("%s - Reading %d bytes from device.\n", DRIVER_NAME, count);
 
 	int error_code = 0;
-	if(buffer == NULL){
+	if(buffer == NULL || count == 0){
 		return 0;
 	}
 
-	if(count == 0){
-		return 0;
-	}
-
-	struct gaomon_data *data;
-
-	data = file->private_data;
+	struct gaomon_data *data = file->private_data;
 	if(data == NULL){
 		pr_alert( "%s - Error: global data not saved to device file.\n", DRIVER_NAME);
-		return -EFAULT;
+		error_code = -EFAULT;
+		goto exit;
 	}
 
 	//TODO: add concurrency stuff here later
 	//we need to make sure there aren't ongoing reads while this is happening 
 
-	while(true){
-		if(data->buffer_usage){
-			size_t available_space = data->buffer_size - data->buffer_usage;
-			size_t read_size = min(available_space, count); 
-			if(!available_space){
-				error_code = gaomon_read_irq(data, count);
-				if(error_code < 0){
-					pr_alert( "%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
-					return error_code;
-				}
-				else{
-					continue;
-				}
-				//else try again
-			}
+	if(!data->urb){
+		pr_err("%s - Error: urb has not been allocated.\n", DRIVER_NAME);
+		error_code = -EFAULT;
+		goto exit;
+	}
 
-			if(read_size == 0){
-				pr_alert( "%s - Error: buffer is full.\n", DRIVER_NAME);
-				return -EFAULT;
-			}
+	error_code = mutex_lock_interruptible(&data->read_mutex);
+	if(error_code < 0){
+		return error_code;
+	}
 
-			if(copy_to_user(buffer, data->buffer + data->buffer_usage, read_size)){
-				pr_alert("%s - Error: could not copy to user space.\n", DRIVER_NAME);
-				return -EFAULT;
-			}
-			data->buffer_usage += read_size;
-
-			if(available_space < count){
-				gaomon_read_irq(data, count - read_size);
-			}
-		}
-		else{
-			error_code = gaomon_read_irq(data, count);
-			if(error_code < 0){
-				pr_alert( "%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
-				return error_code;
-			}
-			else{
-				continue;
-			}
+	// First, submit the URB if not already pending
+	if(data->urb->status != -EINPROGRESS){
+		error_code = gaomon_read_irq(data, count);
+		if(error_code < 0){
+			pr_alert("%s - Error: failed sending urb. Error code %d.\n", DRIVER_NAME, error_code);
+			return error_code;
 		}
 	}
 
-	return 0;
+	if(data->disconnected){
+		error_code = -ENODEV;
+		goto exit;
+	}
+
+	if(data->buffer_usage == 0){
+		goto exit;
+	}
+
+retry:
+
+	if(data->buffer_usage){
+		// if we read data at some point 
+		size_t available = data->buffer_usage - data->buffer_copying;
+		//data that has been read in but not copied to user space
+
+		if(available == 0){
+			//no more data to copy
+			error_code = gaomon_read_irq(data, count);
+			if(error_code != 0){
+				goto exit;
+			}
+			else{
+				goto retry;
+			}
+		}
+
+		size_t read_size = min(available, count);
+
+		if(copy_to_user(buffer, data->buffer + data->buffer_copying, read_size)){
+			error_code = -EFAULT;
+		}
+		else{
+			error_code = read_size;
+		}
+
+		data->buffer_copying += read_size;
+
+		if (available < count){
+			error_code = gaomon_read_irq(data, count);
+		}
+		else{
+			//no data in buffer yet
+			//do first read
+			error_code = gaomon_read_irq(data, count);
+			if(error_code != 0){
+				goto exit;
+			}
+			else{
+				goto retry;
+			}
+
+		}
+	}
+
+exit:
+	mutex_unlock(&data->read_mutex);
+	return error_code;
 }
 
 static ssize_t gaomon_write(struct file *filp, const char __user *buff,size_t len, loff_t *off){

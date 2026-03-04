@@ -67,6 +67,7 @@ struct usb_gaomon {
 	struct usb_anchor	submitted;		/* in case we need to retract our submissions */
 	struct urb		*input_urb;		/* the urb to read data with */
 	unsigned char           *input_buffer;	/* the buffer to receive data */
+	int 			input_interval;
 	size_t			input_size;		/* the size of the receive buffer */
 	size_t			input_filled;		/* number of bytes in the buffer */
 	size_t			input_copied;		/* already copied to user space */
@@ -179,7 +180,7 @@ static int gaomon_flush(struct file *file, fl_owner_t id)
 	return res;
 }
 
-static void gaomon_read_bulk_callback(struct urb *urb)
+static void gaomon_read_callback(struct urb *urb)
 {
 	pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
 
@@ -188,11 +189,6 @@ static void gaomon_read_bulk_callback(struct urb *urb)
 
 	dev = urb->context;
 
-	if(dev->input_urb->status == -EINPROGRESS){
-		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
-	}
-
-	spin_lock_irqsave(&dev->err_lock, flags);
 	/* sync/async unlink faults aren't errors */
 	if (urb->status) {
 		if (!(urb->status == -ENOENT ||
@@ -200,47 +196,60 @@ static void gaomon_read_bulk_callback(struct urb *urb)
 					urb->status == -ESHUTDOWN))
 			dev_err(&dev->interface->dev,
 					"%s - nonzero write bulk status received: %d\n",
-					DRIVER_NAME, urb->status);
+					__func__, urb->status);
 
+		spin_lock_irqsave(&dev->err_lock, flags);
 		dev->errors = urb->status;
-	} else {
-		dev->input_filled = urb->actual_length;
-	}
-	dev->ongoing_read = 0;
-
-	int error_code = usb_submit_urb(urb, GFP_ATOMIC);
-	if(error_code < 0){
-		pr_err("%s - Failed resubmitting read urb, error %d\n", DRIVER_NAME, error_code);
-	}
-	else{
-		dev->ongoing_read = 1;
+		spin_unlock_irqrestore(&dev->err_lock, flags);
 	}
 
-	spin_unlock_irqrestore(&dev->err_lock, flags);
+	/* free up our allocated buffer */
+	usb_free_coherent(urb->dev, urb->transfer_buffer_length,
+			urb->transfer_buffer, urb->transfer_dma);
+	up(&dev->limit_sem);
 
-	wake_up_interruptible(&dev->input_wait);
+	//resubmit urb because interrupt	
+	int rv = usb_submit_urb(urb, GFP_ATOMIC);
+	if(rv){
+		pr_err("%s - Error: failed resubmitting urb.\n", DRIVER_NAME);
+	}
 }
 
 static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 
 {
+	if(dev->input_urb->status == -EINPROGRESS){
+		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
+		return 0;
+	}
+
 	int rv;
 
+	unsigned int pipe = usb_rcvintpipe(dev->udev, dev->input_endpointAddr);
+
+	rv = usb_pipe_type_check(dev->udev, pipe);
+	if(rv)
+		pr_err("%s - Error: pipe has invalid format. Error code %d.\n", DRIVER_NAME, rv);
+
 	/* prepare a read */
-	usb_fill_bulk_urb(dev->input_urb,
+	usb_fill_int_urb(dev->input_urb,
 			dev->udev,
-			usb_rcvbulkpipe(dev->udev,
-				dev->input_endpointAddr),
+			pipe,
 			dev->input_buffer,
 			min(dev->input_size, count),
-			gaomon_read_bulk_callback,
-			dev);
+			gaomon_read_callback,
+			dev, dev->input_interval);
+
+	rv = usb_urb_ep_type_check(dev->input_urb);
+	if(rv)
+		pr_err("%s - Error: urb has invalid endpoint. Error code %d.\n", DRIVER_NAME, rv);
+
 	/* tell everybody to leave the URB alone */
 	spin_lock_irq(&dev->err_lock);
 	dev->ongoing_read = 1;
 	spin_unlock_irq(&dev->err_lock);
 
-	/* submit bulk in urb, which means no data to deliver */
+	/* submit int in urb, which means no data to deliver */
 	dev->input_filled = 0;
 	dev->input_copied = 0;
 
@@ -418,7 +427,6 @@ static int gaomon_probe(struct usb_interface *interface,
 	dev->interface = usb_get_intf(interface);
 
 	/* set up the endpoint information */
-	/* use only the first bulk-in and bulk-out endpoints */
 	retval = usb_find_common_endpoints(interface->cur_altsetting,
 			NULL, NULL, &endpoint, NULL);
 	if (retval) {
@@ -429,6 +437,7 @@ static int gaomon_probe(struct usb_interface *interface,
 
 	dev->input_size = usb_endpoint_maxp(endpoint);
 	dev->input_endpointAddr = endpoint->bEndpointAddress;
+	dev->input_interval = endpoint->bInterval;
 	dev->input_buffer = kmalloc(dev->input_size, GFP_KERNEL);
 	if (!dev->input_buffer) {
 		retval = -ENOMEM;

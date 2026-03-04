@@ -98,6 +98,8 @@ static void gaomon_delete(struct kref *kref)
 
 static int gaomon_open(struct inode *inode, struct file *file)
 {
+	
+	pr_info("%s - Running open function.\n", DRIVER_NAME);
 	struct usb_gaomon *dev;
 	struct usb_interface *interface;
 	int subminor;
@@ -182,7 +184,7 @@ static int gaomon_flush(struct file *file, fl_owner_t id)
 
 static void gaomon_read_callback(struct urb *urb)
 {
-	// pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
+	pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
 
 	struct usb_gaomon *dev;
 	unsigned long flags;
@@ -225,7 +227,7 @@ static void gaomon_read_callback(struct urb *urb)
 static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 
 {
-	// pr_info("%s - Running read io function.\n", DRIVER_NAME);
+	pr_info("%s - Running read io function.\n", DRIVER_NAME);
 
 	if(dev->input_urb->status == -EINPROGRESS){
 		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
@@ -422,6 +424,7 @@ static struct usb_class_driver gaomon_class = {
 static int gaomon_probe(struct usb_interface *interface,
 		const struct usb_device_id *id)
 {
+	pr_info( "%s - Probe function", DRIVER_NAME);
 	struct usb_gaomon *dev;
 	struct usb_endpoint_descriptor *endpoint;
 	int retval;
@@ -588,9 +591,9 @@ static int __init gaomon_driver_init(void){
 	gaomon_minor_no = MINOR(gaomon_device);
 
 	// pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
-	// pr_info("This line is a test. To talk to\n");
-	// pr_cont("the driver, create a dev file with\n");
-	// pr_info("'mknod /dev/%s c %d %d'.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);
+	 pr_info("To talk to\n");
+	 pr_cont("the driver, create a dev file with\n");
+	 pr_info("'mknod /dev/%s c %d %d'.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);
 	// pr_info("Try various minor numbers. Try to cat and echo to\n");
 	// pr_cont(" the device file.\n");
 	// pr_info("Remove the device file and module when done.\n");

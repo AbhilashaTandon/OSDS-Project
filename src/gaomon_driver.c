@@ -182,7 +182,7 @@ static int gaomon_flush(struct file *file, fl_owner_t id)
 
 static void gaomon_read_callback(struct urb *urb)
 {
-	pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
+	// pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
 
 	struct usb_gaomon *dev;
 	unsigned long flags;
@@ -225,7 +225,7 @@ static void gaomon_read_callback(struct urb *urb)
 static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 
 {
-	pr_info("%s - Running read io function.\n", DRIVER_NAME);
+	// pr_info("%s - Running read io function.\n", DRIVER_NAME);
 
 	if(dev->input_urb->status == -EINPROGRESS){
 		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
@@ -280,7 +280,7 @@ static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 static ssize_t gaomon_read(struct file *file, char *buffer, size_t count,
 		loff_t *ppos)
 {
-	pr_info("%s - Reading from device.\n", DRIVER_NAME);
+	// pr_info("%s - Reading from device.\n", DRIVER_NAME);
 
 	struct usb_gaomon *dev;
 	int rv;
@@ -367,12 +367,8 @@ retry:
 		else
 			rv = chunk;
 
-		pr_info("%s - Copied data to user space.\n", DRIVER_NAME);
-
-		for(int i = 0; i < chunk; i++){
-			pr_info("%d", *(dev->input_buffer + dev->input_copied + i));
-		}
-		pr_info(".\n");
+		// pr_info("%s - Copied %zd bytes to user space.\n", DRIVER_NAME, chunk);
+		//need z because its a size_t
 
 		dev->input_copied += chunk;
 
@@ -591,13 +587,13 @@ static int __init gaomon_driver_init(void){
 	gaomon_major_no = MAJOR(gaomon_device);
 	gaomon_minor_no = MINOR(gaomon_device);
 
-	pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
-	pr_info("This line is a test. To talk to\n");
-	pr_cont("the driver, create a dev file with\n");
-	pr_info("'mknod /dev/%s c %d %d'.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);
-	pr_info("Try various minor numbers. Try to cat and echo to\n");
-	pr_cont(" the device file.\n");
-	pr_info("Remove the device file and module when done.\n");
+	// pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
+	// pr_info("This line is a test. To talk to\n");
+	// pr_cont("the driver, create a dev file with\n");
+	// pr_info("'mknod /dev/%s c %d %d'.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);
+	// pr_info("Try various minor numbers. Try to cat and echo to\n");
+	// pr_cont(" the device file.\n");
+	// pr_info("Remove the device file and module when done.\n");
 
 	cdev_init(&gaomon_char_device, &gaomon_fops);
 	error_code = cdev_add(&gaomon_char_device, gaomon_device, 1);

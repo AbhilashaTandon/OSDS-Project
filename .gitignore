@@ -11,3 +11,4 @@
 *.mod.c
 notes.md
 src/log.txt
+src/parse_log_file

@@ -189,6 +189,8 @@ static void gaomon_read_callback(struct urb *urb)
 
 	dev = urb->context;
 
+	spin_lock_irqsave(&dev->err_lock, flags);
+
 	/* sync/async unlink faults aren't errors */
 	if (urb->status) {
 		if (!(urb->status == -ENOENT ||
@@ -198,26 +200,33 @@ static void gaomon_read_callback(struct urb *urb)
 					"%s - nonzero write bulk status received: %d\n",
 					__func__, urb->status);
 
-		spin_lock_irqsave(&dev->err_lock, flags);
 		dev->errors = urb->status;
-		spin_unlock_irqrestore(&dev->err_lock, flags);
 	}
+	else{
+		dev->input_filled = urb->actual_length;
+	}
+	dev->ongoing_read = 0;
 
-	/* free up our allocated buffer */
-	usb_free_coherent(urb->dev, urb->transfer_buffer_length,
-			urb->transfer_buffer, urb->transfer_dma);
-	up(&dev->limit_sem);
+	spin_unlock_irqrestore(&dev->err_lock, flags);
+
+	wake_up_interruptible(&dev->input_wait);
+
 
 	//resubmit urb because interrupt	
-	int rv = usb_submit_urb(urb, GFP_ATOMIC);
-	if(rv){
-		pr_err("%s - Error: failed resubmitting urb.\n", DRIVER_NAME);
-	}
+	// int rv = usb_submit_urb(urb, GFP_ATOMIC);
+	// if(rv){
+		// pr_err("%s - Error: failed resubmitting urb.\n", DRIVER_NAME);
+	// }
+	// else{
+		// pr_info("%s - Successfully resubmitted urb.\n", DRIVER_NAME);
+	// }
 }
 
 static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 
 {
+	pr_info("%s - Running read io function.\n", DRIVER_NAME);
+
 	if(dev->input_urb->status == -EINPROGRESS){
 		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
 		return 0;
@@ -271,6 +280,8 @@ static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 static ssize_t gaomon_read(struct file *file, char *buffer, size_t count,
 		loff_t *ppos)
 {
+	pr_info("%s - Reading from device.\n", DRIVER_NAME);
+
 	struct usb_gaomon *dev;
 	int rv;
 	bool ongoing_io;
@@ -286,6 +297,7 @@ static ssize_t gaomon_read(struct file *file, char *buffer, size_t count,
 		return rv;
 
 	if (dev->disconnected) {		/* disconnect() was called */
+		pr_info("%s - Disconnect called, stopping read operation.\n", DRIVER_NAME);
 		rv = -ENODEV;
 		goto exit;
 	}
@@ -354,6 +366,13 @@ retry:
 			rv = -EFAULT;
 		else
 			rv = chunk;
+
+		pr_info("%s - Copied data to user space.\n", DRIVER_NAME);
+
+		for(int i = 0; i < chunk; i++){
+			pr_info("%d", *(dev->input_buffer + dev->input_copied + i));
+		}
+		pr_info(".\n");
 
 		dev->input_copied += chunk;
 

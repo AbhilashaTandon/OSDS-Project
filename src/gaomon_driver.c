@@ -282,7 +282,7 @@ static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 static ssize_t gaomon_read(struct file *file, char *buffer, size_t count,
 		loff_t *ppos)
 {
-	// pr_info("%s - Reading from device.\n", DRIVER_NAME);
+	pr_info("%s - Reading from device.\n", DRIVER_NAME);
 
 	struct usb_gaomon *dev;
 	int rv;
@@ -366,8 +366,15 @@ retry:
 					dev->input_buffer + dev->input_copied,
 					chunk))
 			rv = -EFAULT;
-		else
+		else {
 			rv = chunk;
+			for(int i = 0; i < chunk-1; i++){
+				unsigned char *buffer_ptr = dev->input_buffer + dev->input_copied + i;
+				if(*buffer_ptr == 0x08 && *(buffer_ptr + 1) == 0xe0){
+					pr_info("%s - Button pressed or unpressed!.\n", DRIVER_NAME);
+				}
+			}
+		}
 
 		// pr_info("%s - Copied %zd bytes to user space.\n", DRIVER_NAME, chunk);
 		//need z because its a size_t

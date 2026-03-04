@@ -29,3 +29,26 @@ Again each of these chunks are 16 bits. The pen pressure value has a max value o
 
 
 # Keyboard Inputs
+
+Keyboard inputs have much the same format as mouse inputs. They are signalled by the 2 byte code 0xe008, which seems to be always followed by the code 0x0101. The full format is given below.
+
+```
+0xe008 0x0101 button 0x0000 0x0000 0x0000
+```
+
+Again all these values are 16 bits. Note these only apply to the 10 buttons on the tablet itself, and not the two buttons on the pen. The value of the button always has 1 bit set, and the position of this bit corresponds to a specific button.
+
+```
+Button 1: 0x0001
+Button 2: 0x0002
+Button 1: 0x0004
+Button 1: 0x0008
+Button 1: 0x0010
+Button 1: 0x0020
+Button 1: 0x0040
+Button 1: 0x0080
+Button 1: 0x0100
+Button 1: 0x0200
+```
+
+A button value of 0x0000 indicates the button was released. Interestingly, despite the fact that each button is assigned its own bit doesn't seem to be possible to register multiple button presses at once. The tablet does not register a button press that occurs when another button is held.

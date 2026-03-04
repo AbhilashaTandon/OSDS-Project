@@ -42,6 +42,18 @@ int main(void)
 			}
 			printf("\n");
 		}
+		else if(last_char == 0xe0){
+			printf("btn");
+			for(int i = 0; i < 8; i++){
+				second_to_last_char = last_char;
+				last_char = c;
+				c = fgetc(logfile);
+				if(i % 2 == 1){
+					printf("%02x%02x ", last_char, second_to_last_char);
+				}
+			}
+			printf("\n");
+		}
 		if (ferror(logfile)){
 			puts("I/O error when reading");
 			break;

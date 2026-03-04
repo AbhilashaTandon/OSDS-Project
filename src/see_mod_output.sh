@@ -4,5 +4,5 @@ sudo modprobe -r hid_uclogic
 sudo modprobe -r usbhid
 sudo rmmod gaomon_driver
 sudo insmod gaomon_driver.ko
-cat /dev/gaomon_driver
+cat /dev/gaomon_driver > log.txt
 sudo dmesg | grep gaomon_driver

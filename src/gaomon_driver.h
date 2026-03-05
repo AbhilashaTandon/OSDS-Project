@@ -84,3 +84,5 @@ struct usb_gaomon {
 
 static struct usb_driver gaomon_driver;
 static void gaomon_draw_down(struct usb_gaomon *dev);
+
+static struct input_dev *keyboard_input;

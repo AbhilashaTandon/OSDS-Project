@@ -10,6 +10,11 @@
 
 #include "gaomon_driver.h"
 
+// INPUT METHODS
+
+
+// FOPS METHODS
+
 static void gaomon_delete(struct kref *kref)
 {
 	struct usb_gaomon *dev = to_gaomon_dev(kref);

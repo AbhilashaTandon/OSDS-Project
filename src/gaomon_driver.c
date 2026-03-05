@@ -24,7 +24,7 @@ static void gaomon_delete(struct kref *kref)
 static int gaomon_open(struct inode *inode, struct file *file)
 {
 	
-	pr_info("%s - Running open function.\n", DRIVER_NAME);
+	// pr_info("%s - Running open function.\n", DRIVER_NAME);
 	struct usb_gaomon *dev;
 	struct usb_interface *interface;
 	int subminor;
@@ -109,7 +109,8 @@ static int gaomon_flush(struct file *file, fl_owner_t id)
 
 static void gaomon_read_callback(struct urb *urb)
 {
-	pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
+	// pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
+
 
 	struct usb_gaomon *dev;
 	unsigned long flags;
@@ -152,7 +153,7 @@ static void gaomon_read_callback(struct urb *urb)
 static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 
 {
-	pr_info("%s - Running read io function.\n", DRIVER_NAME);
+	//	pr_info("%s - Running read io function.\n", DRIVER_NAME);
 
 	if(dev->input_urb->status == -EINPROGRESS){
 		pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
@@ -207,7 +208,7 @@ static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 static ssize_t gaomon_read(struct file *file, char *buffer, size_t count,
 		loff_t *ppos)
 {
-	pr_info("%s - Reading from device.\n", DRIVER_NAME);
+	// pr_info("%s - Reading from device.\n", DRIVER_NAME);
 
 	struct usb_gaomon *dev;
 	int rv;
@@ -293,12 +294,6 @@ retry:
 			rv = -EFAULT;
 		else {
 			rv = chunk;
-			for(int i = 0; i < chunk-1; i++){
-				unsigned char *buffer_ptr = dev->input_buffer + dev->input_copied + i;
-				if(*buffer_ptr == 0x08 && *(buffer_ptr + 1) == 0xe0){
-					pr_info("%s - Button pressed or unpressed!.\n", DRIVER_NAME);
-				}
-			}
 		}
 
 		// pr_info("%s - Copied %zd bytes to user space.\n", DRIVER_NAME, chunk);
@@ -356,7 +351,7 @@ static struct usb_class_driver gaomon_class = {
 static int gaomon_probe(struct usb_interface *interface,
 		const struct usb_device_id *id)
 {
-	pr_info( "%s - Probe function", DRIVER_NAME);
+	// pr_info( "%s - Probe function", DRIVER_NAME);
 	struct usb_gaomon *dev;
 	struct usb_endpoint_descriptor *endpoint;
 	int retval;
@@ -511,7 +506,6 @@ static struct usb_driver gaomon_driver = {
 
 
 static int __init gaomon_driver_init(void){
-	pr_info( "%s - Hello!", DRIVER_NAME);
 
 	int error_code;
 	if ((error_code = alloc_chrdev_region(&gaomon_device, USB_GAOMON_MINOR_BASE, 1,DRIVER_NAME)) < 0)	{
@@ -522,13 +516,9 @@ static int __init gaomon_driver_init(void){
 	gaomon_major_no = MAJOR(gaomon_device);
 	gaomon_minor_no = MINOR(gaomon_device);
 
-	// pr_info("I'm %s. I'm a kernel module with major number %d and minor number %d.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);	
-	 pr_info("To talk to\n");
-	 pr_cont("the driver, create a dev file with\n");
-	 pr_info("'mknod /dev/%s c %d %d'.\n", DRIVER_NAME, gaomon_major_no, gaomon_minor_no);
-	// pr_info("Try various minor numbers. Try to cat and echo to\n");
-	// pr_cont(" the device file.\n");
-	// pr_info("Remove the device file and module when done.\n");
+	pr_info("Major No: %d\n", gaomon_major_no);
+	pr_info("Minor No: %d\n", gaomon_minor_no);
+
 
 	cdev_init(&gaomon_char_device, &gaomon_fops);
 	error_code = cdev_add(&gaomon_char_device, gaomon_device, 1);
@@ -545,14 +535,11 @@ static int __init gaomon_driver_init(void){
 		return error_code;
 	}
 
-	pr_info("%s - USB driver registered successfully!.\n", DRIVER_NAME); 
 	return 0;
 }
 
 
 static void __exit gaomon_driver_exit(void){
-	pr_info("%s - Goodbye!", DRIVER_NAME);
-
 	usb_deregister(&gaomon_driver);
 	unregister_chrdev_region(gaomon_device, 1);
 }

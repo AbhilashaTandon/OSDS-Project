@@ -11,57 +11,43 @@ int main(void)
 	unsigned char last_char = 0;
 	unsigned char second_to_last_char = 0;
 	unsigned char c = 0;
-	while (c != EOF){
-		second_to_last_char = last_char;
-		last_char = c;
-		c = fgetc(logfile);
-		if(second_to_last_char != 0x08){
-			continue;
-		}
-		if(last_char == 0x80){
-			printf("pos");
-			for(int i = 0; i < 8; i++){
-				second_to_last_char = last_char;
-				last_char = c;
-				c = fgetc(logfile);
-				if(i % 2 == 1){
-					printf("%02x%02x ", last_char, second_to_last_char);
-				}
-			}
-			printf("\n");
-		}
-		else if(last_char == 0x81){
-			printf("pres");
-			for(int i = 0; i < 8; i++){
-				second_to_last_char = last_char;
-				last_char = c;
-				c = fgetc(logfile);
-				if(i % 2 == 1){
-					printf("%02x%02x ", last_char, second_to_last_char);
-				}
-			}
-			printf("\n");
-		}
-		else if(last_char == 0xe0){
-			printf("btn");
-			for(int i = 0; i < 8; i++){
-				second_to_last_char = last_char;
-				last_char = c;
-				c = fgetc(logfile);
-				if(i % 2 == 1){
-					printf("%02x%02x ", last_char, second_to_last_char);
-				}
-			}
-			printf("\n");
-		}
+	for(int i = 0; c != EOF; i++){
 		if (ferror(logfile)){
-			puts("I/O error when reading");
+			puts("\nI/O error when reading");
 			break;
 		}
 		else if (feof(logfile))
 		{
-			puts("End of file is reached successfully");
+			puts("\nEnd of file is reached successfully");
 			break;
+		}
+
+		second_to_last_char = last_char;
+		last_char = c;
+		c = fgetc(logfile);
+
+
+		if(second_to_last_char == 0x08){
+			if(last_char == 0x80){
+				printf("\npen position  ");
+			}
+			else if(last_char == 0x81){
+				printf("\npen pressure  ");
+			}
+			else if(last_char == 0x82){
+				printf("\nbottom button ");
+			}
+			else if(last_char == 0x84){
+				printf("\ntop button    ");
+			}
+			else if(last_char == 0xe0){
+				printf("\nbutton press  ");
+			}
+		}
+
+		if(i % 2 == 0){
+			printf("%02x%02x ", last_char, second_to_last_char);
+			//little endian
 		}
 
 	}

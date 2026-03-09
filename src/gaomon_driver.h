@@ -71,6 +71,7 @@ struct usb_gaomon {
 	size_t			input_size;		/* the size of the receive buffer */
 	size_t			input_filled;		/* number of bytes in the buffer */
 	size_t			input_copied;		/* already copied to user space */
+	size_t			input_processed;        /* already processed and converted to inputs */
 	__u8			input_endpointAddr;	/* the address of the bulk in endpoint */
 	int			errors;			/* the last request tanked */
 	bool			ongoing_read;		/* a read is going on */

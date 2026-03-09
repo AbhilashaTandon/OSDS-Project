@@ -4,11 +4,13 @@
 .modules.order.cmd
 *.cmd
 *.o
+*.o.d
 *.mod
 *.ko
 *.symvers
 *.order
 *.mod.c
+*.un~
 notes.md
 src/log.txt
 src/parse_log_file

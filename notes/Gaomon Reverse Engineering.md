@@ -41,14 +41,14 @@ Again all these values are 16 bits. Note these only apply to the 10 buttons on t
 ```
 Button 1: 0x0001
 Button 2: 0x0002
-Button 1: 0x0004
-Button 1: 0x0008
-Button 1: 0x0010
-Button 1: 0x0020
-Button 1: 0x0040
-Button 1: 0x0080
-Button 1: 0x0100
-Button 1: 0x0200
+Button 3: 0x0004
+Button 4: 0x0008
+Button 5: 0x0010
+Button 6: 0x0020
+Button 7: 0x0040
+Button 8: 0x0080
+Button 9: 0x0100
+Button 10: 0x0200
 ```
 
 A button value of 0x0000 indicates the button was released. Interestingly, despite the fact that each button is assigned its own bit doesn't seem to be possible to register multiple button presses at once. The tablet does not register a button press that occurs when another button is held.

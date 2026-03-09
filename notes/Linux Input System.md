@@ -1,4 +1,4 @@
-# Linux Input System
+ Linux Input System
 
 The Linux input system is the set of commands used to tell the OS about external inputs, such as from keyboards or mice. These functions are declared in the `linux/input.h` file, which needs to be included into any input driver. To write an input driver, the author must register their input device with the system and give information about what signals it will send. It can then report events such as key presses which will be recognized and interpreted by the system.
 
@@ -43,7 +43,7 @@ Of these `EV_KEY` is probably the most useful, used for keys and buttons. Report
 input_report_key(struct input_dev *dev, int code, int value)
 ```
 
-`EV_REL` and `EV_ABS` are also quite useful for the afformentioned relative and absolute axes. Reporting relative axis inputs is thankfully pretty similar, using a function with identical arguments as the previous, but called `input_report_rel` instead.
+`EV_REL` and `EV_ABS` are also quite useful for the aformentioned relative and absolute axes. Reporting relative axis inputs is thankfully pretty similar, using a function with identical arguments as the previous, but called `input_report_rel` instead.
 
 `EV_REP` is used for key autorepetition.
 

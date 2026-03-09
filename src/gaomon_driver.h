@@ -17,6 +17,7 @@
 #include <linux/errno.h>
 #include <linux/fs.h>
 #include <linux/init.h> // needed for macros
+#include <linux/input.h>
 #include <linux/kernel.h> 
 #include <linux/kref.h>  
 #include <linux/module.h> //needed by all modules
@@ -49,21 +50,11 @@ static int gaomon_minor_no; /* minor number assigned to our device driver */
 /* Get a minor range for your devices from the usb maintainer */
 #define USB_GAOMON_MINOR_BASE	0
 
-/* our private defines. if this grows any larger, use your own .h file */
-#define MAX_TRANSFER		(PAGE_SIZE - 512)
-/*
- * MAX_TRANSFER is chosen so that the VM is not stressed by
- * allocations > PAGE_SIZE and the number of packets in a page
- * is an integer 512 is the largest possible packet on EHCI
- */
-#define WRITES_IN_FLIGHT	8
-/* arbitrarily chosen */
 
 /* Structure to hold all of our device specific stuff */
 struct usb_gaomon {
 	struct usb_device	*udev;			/* the usb device for this device */
 	struct usb_interface	*interface;		/* the interface for this device */
-	struct semaphore	limit_sem;		/* limiting the number of writes in progress */
 	struct usb_anchor	submitted;		/* in case we need to retract our submissions */
 	struct urb		*input_urb;		/* the urb to read data with */
 	unsigned char           *input_buffer;	/* the buffer to receive data */
@@ -71,7 +62,7 @@ struct usb_gaomon {
 	size_t			input_size;		/* the size of the receive buffer */
 	size_t			input_filled;		/* number of bytes in the buffer */
 	size_t			input_copied;		/* already copied to user space */
-	__u8			input_endpointAddr;	/* the address of the bulk in endpoint */
+	__u8			input_endpointAddr;	/* the address of the input endpoint */
 	int			errors;			/* the last request tanked */
 	bool			ongoing_read;		/* a read is going on */
 	spinlock_t		err_lock;		/* lock for errors */
@@ -86,3 +77,21 @@ static struct usb_driver gaomon_driver;
 static void gaomon_draw_down(struct usb_gaomon *dev);
 
 static struct input_dev *keyboard_input;
+//probably need a struct input_dev for both keyboard and mouse input
+
+enum gaomon_tablet_buttons{
+        NONE,
+        GAOMON_BUTTON_1,
+        GAOMON_BUTTON_2,
+        GAOMON_BUTTON_3,
+        GAOMON_BUTTON_4,
+        GAOMON_BUTTON_5,
+        GAOMON_BUTTON_6,
+        GAOMON_BUTTON_7,
+        GAOMON_BUTTON_8,
+        GAOMON_BUTTON_9,
+        GAOMON_BUTTON_10,
+};
+
+static enum gaomon_tablet_buttons gaomon_button_pressed = NONE;
+//what button is currently pressed

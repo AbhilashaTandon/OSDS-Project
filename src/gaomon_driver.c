@@ -12,6 +12,32 @@
 
 // INPUT METHODS
 
+/*
+   void process_tablet_button_input(struct usb_gaomon *dev, int* i){ 
+//we need to read in 4 bytes to process tablet button events
+
+for(int j = 0; j < 4; j++){
+assert(*i + j 
+}
+
+}
+
+static irqreturn_t button_interrupt(int irq, void* dev){
+unsigned char previous_byte = 0;
+unsigned char current_byte = 0;
+event_buffer = kzalloc(sizeof(char) * 12, GFP_KERNEL);
+for(int i = 0; i < dev->input_filled; i++){
+current_byte = *(dev->input_buffer + i);
+if(current_byte != 0x08){
+//all i/o event codes end in 0x08
+previous_byte = current_byte;
+continue;
+}
+//write 12 bytes to buffer
+
+}
+}
+*/
 
 // FOPS METHODS
 
@@ -141,10 +167,15 @@ static void gaomon_read_callback(struct urb *urb)
         }
         else{
                 dev->input_filled = urb->actual_length;
+                pr_info("%s - read urb of length %d.\n", DRIVER_NAME, dev->input_filled);
+                //call input processing function 
         }
+
         dev->ongoing_read = 0;
 
         spin_unlock_irqrestore(&dev->err_lock, flags);
+
+
 
         wake_up_interruptible(&dev->input_wait);
 
@@ -376,7 +407,6 @@ static int gaomon_probe(struct usb_interface *interface,
                 return -ENOMEM;
 
         kref_init(&dev->kref);
-        sema_init(&dev->limit_sem, WRITES_IN_FLIGHT);
         mutex_init(&dev->io_mutex);
         spin_lock_init(&dev->err_lock);
         init_usb_anchor(&dev->submitted);
@@ -491,6 +521,10 @@ static int gaomon_pre_reset(struct usb_interface *intf)
 {
         struct usb_gaomon *dev = usb_get_intfdata(intf);
 
+        if(!dev){
+                return -EFAULT;
+        }
+
         mutex_lock(&dev->io_mutex);
         gaomon_draw_down(dev);
 
@@ -539,25 +573,60 @@ static int __init gaomon_driver_init(void){
 
         cdev_init(&gaomon_char_device, &gaomon_fops);
         error_code = cdev_add(&gaomon_char_device, gaomon_device, 1);
-
         if(error_code){
                 pr_alert("%s - Error registering char driver. Error code %d.\n", DRIVER_NAME, error_code);
-                return error_code;
+                goto dealloc_region;
         }
 
         error_code = usb_register(&gaomon_driver);
-
         if(error_code){
                 pr_alert("%s - Error during register. Error code %d.\n", DRIVER_NAME, error_code);
-                return error_code;
+                goto del_cdev;
         }
 
-        return 0;
+        keyboard_input = input_allocate_device(); 
+        if(!keyboard_input){
+                pr_err("%s - Could not allocate input device for tablet buttons.\n", DRIVER_NAME);
+                error_code = -ENOMEM;
+                goto dereg_usb;
+        }
+
+        set_bit(EV_KEY, keyboard_input->evbit);
+        set_bit(KEY_A, keyboard_input->evbit);
+        set_bit(KEY_B, keyboard_input->evbit);
+        set_bit(KEY_C, keyboard_input->evbit);
+        set_bit(KEY_D, keyboard_input->evbit);
+        set_bit(KEY_E, keyboard_input->evbit);
+        set_bit(KEY_F, keyboard_input->evbit);
+        set_bit(KEY_G, keyboard_input->evbit);
+        set_bit(KEY_H, keyboard_input->evbit);
+        set_bit(KEY_I, keyboard_input->evbit);
+        set_bit(KEY_J, keyboard_input->evbit);
+
+        error_code = input_register_device(keyboard_input);
+        if(error_code){
+                pr_alert("%s - Error registering input device. Error code %d.\n", DRIVER_NAME, error_code);
+                goto deregister_input;
+        }
+
+deregister_input:
+        input_unregister_device(keyboard_input);
+dereg_usb:
+        usb_deregister(&gaomon_driver);
+del_cdev:
+        cdev_del(&gaomon_char_device);
+dealloc_region:
+        unregister_chrdev_region(gaomon_device, 1);
+
+        return error_code;
 }
 
 
 static void __exit gaomon_driver_exit(void){
+        if(keyboard_input)
+                input_unregister_device(keyboard_input);
         usb_deregister(&gaomon_driver);
+        cdev_del(&gaomon_char_device);
         unregister_chrdev_region(gaomon_device, 1);
 }
 

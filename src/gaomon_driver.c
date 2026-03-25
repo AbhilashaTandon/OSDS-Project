@@ -61,8 +61,13 @@ static void gaomon_process_input(struct usb_gaomon *dev, int chunk){
                 enum gaomon_tablet_buttons button = decode_button_code(button_code);
                 gaomon_button_pressed = button;
 
-                input_report_key(keyboard_input, KEY_A, button);
-                input_sync(keyboard_input);
+                if(keyboard_input == NULL){
+                        pr_info("%s - Keyboard input device uninitialized.\n");
+                }
+                else{
+                        input_report_key(keyboard_input, KEY_A, button);
+                        input_sync(keyboard_input);
+                }
 
                 i+=12;
         }
@@ -605,6 +610,8 @@ static int __init gaomon_driver_init(void){
                 pr_err("%s - Could not allocate input device for tablet buttons.\n", DRIVER_NAME);
                 return error_code;
         }
+
+        keyboard_input->name = "Gaomon Tablet Buttons";  
 
         set_bit(EV_KEY, keyboard_input->evbit);
         set_bit(KEY_A, keyboard_input->keybit);

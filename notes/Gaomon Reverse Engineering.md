@@ -17,7 +17,7 @@ When the 16 bit sequence 0x8008 is transmitted the tablet registered the pen was
 0x8008 x_coord_lower y_coord 0x0000 x_coord_higher 0x0000
 ```
 
-All of these chunks are 16 bits or 4 hex digits. I assume one or both of these 0s actually represent some value (presumably the second one is the higher 2 bytes of the y coordinate) but I haven't seen them be nonzero in my testing. My screen is wide enough that the higher 2 bytes of the x coordinate were used. The x coordinate values seemed to range from 0x00000 - 0x10b00, and the y coordinate values 0x0000 - 0x9000 very roughly.
+All of these chunks are 16 bits or 4 hex digits. I assume one or both of these 0s actually represent some value (presumably the second one is the higher 2 bytes of the y coordinate) but I haven't seen them be nonzero in my testing. My screen is wide enough that the higher 2 bytes of the x coordinate were used. On my screen I got a maximum value of 0x10cda or 68826 for the x coordinate and 0x972e or 38702 for the y coordinate, which gives an aspect ratio very close to 16:9, which sounds right.
 
 When the 16bit sequence 0x8108 is transmitted the tablet registered a pen press/click. The structure of this message is similar. 
 

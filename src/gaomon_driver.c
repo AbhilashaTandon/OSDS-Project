@@ -59,15 +59,19 @@ static void gaomon_process_input(struct usb_gaomon *dev, int chunk){
                 pr_info("%04x", button_code);
 
                 enum gaomon_tablet_buttons button = decode_button_code(button_code);
-                gaomon_button_pressed = button;
 
                 if(keyboard_input == NULL){
                         pr_info("%s - Keyboard input device uninitialized.\n");
                 }
+                else if(button != NONE){
+                        input_report_key(keyboard_input, gaomon_key_bindings[button], 1);
+                }
                 else{
-                        input_report_key(keyboard_input, KEY_A, button);
+                        input_report_key(keyboard_input, gaomon_key_bindings[gaomon_button_pressed], 0);
                         input_sync(keyboard_input);
                 }
+
+                gaomon_button_pressed = button;
 
                 i+=12;
         }
@@ -615,6 +619,15 @@ static int __init gaomon_driver_init(void){
 
         set_bit(EV_KEY, keyboard_input->evbit);
         set_bit(KEY_A, keyboard_input->keybit);
+        set_bit(KEY_B, keyboard_input->keybit);
+        set_bit(KEY_C, keyboard_input->keybit);
+        set_bit(KEY_D, keyboard_input->keybit);
+        set_bit(KEY_E, keyboard_input->keybit);
+        set_bit(KEY_F, keyboard_input->keybit);
+        set_bit(KEY_G, keyboard_input->keybit);
+        set_bit(KEY_H, keyboard_input->keybit);
+        set_bit(KEY_I, keyboard_input->keybit);
+        set_bit(KEY_J, keyboard_input->keybit);
 
         error_code = input_register_device(keyboard_input);
         if(error_code){

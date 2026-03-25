@@ -105,3 +105,5 @@ enum gaomon_tablet_buttons{
 
 static enum gaomon_tablet_buttons gaomon_button_pressed = NONE;
 //what button is currently pressed
+
+static int gaomon_key_bindings[11] = {KEY_ESC, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J};

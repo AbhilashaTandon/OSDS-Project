@@ -60,32 +60,6 @@ static int gaomon_minor_no; /* minor number assigned to our device driver */
 #define WRITES_IN_FLIGHT	8
 /* arbitrarily chosen */
 
-/* Structure to hold all of our device specific stuff */
-struct usb_gaomon {
-	struct usb_device	*udev;			/* the usb device for this device */
-	struct usb_interface	*interface;		/* the interface for this device */
-	struct semaphore	limit_sem;		/* limiting the number of writes in progress */
-	struct usb_anchor	submitted;		/* in case we need to retract our submissions */
-	struct urb		*input_urb;		/* the urb to read data with */
-	unsigned char           *input_buffer;	/* the buffer to receive data */
-	int 			input_interval;
-	size_t			input_size;		/* the size of the receive buffer */
-	size_t			input_filled;		/* number of bytes in the buffer */
-	size_t			input_copied;		/* already copied to user space */
-	__u8			input_endpointAddr;	/* the address of the input endpoint */
-	int			errors;			/* the last request tanked */
-	bool			ongoing_read;		/* a read is going on */
-	spinlock_t		err_lock;		/* lock for errors */
-	struct kref		kref;
-	struct mutex		io_mutex;		/* synchronize I/O with disconnect */
-	unsigned long		disconnected:1;
-	wait_queue_head_t	input_wait;		/* to wait for an ongoing read */
-};
-#define to_gaomon_dev(d) container_of(d, struct usb_gaomon, kref)
-
-static struct usb_driver gaomon_driver;
-static void gaomon_draw_down(struct usb_gaomon *dev);
-
 static struct input_dev *keyboard_input;
 //probably need a struct input_dev for both keyboard and mouse input
 
@@ -103,7 +77,35 @@ enum gaomon_tablet_buttons{
         GAOMON_BUTTON_10,
 };
 
-static enum gaomon_tablet_buttons gaomon_button_pressed = NONE;
-//what button is currently pressed
 
 static int gaomon_key_bindings[11] = {KEY_ESC, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J};
+
+/* Structure to hold all of our device specific stuff */
+struct usb_gaomon {
+	struct usb_device       	*udev;			/* the usb device for this device */
+	struct usb_interface    	*interface;		/* the interface for this device */
+	struct semaphore        	limit_sem;		/* limiting the number of writes in progress */
+	struct usb_anchor       	submitted;		/* in case we need to retract our submissions */
+	struct urb	        	*input_urb;		/* the urb to read data with */
+	unsigned char                   *input_buffer;          /* the buffer to receive data */
+	int 		        	input_interval;
+	size_t		        	input_size;		/* the size of the receive buffer */
+	size_t		        	input_filled;		/* number of bytes in the buffer */
+	size_t		        	input_copied;		/* already copied to user space */
+	__u8		        	input_endpointAddr;	/* the address of the input endpoint */
+	int		        	errors;			/* the last request tanked */
+	bool		        	ongoing_read;		/* a read is going on */
+	spinlock_t      		err_lock;		/* lock for errors */
+	struct kref	        	kref;
+	struct mutex		        io_mutex;		/* synchronize I/O with disconnect */
+	unsigned long		        disconnected:1;
+	wait_queue_head_t       	input_wait;		/* to wait for an ongoing read */
+        enum gaomon_tablet_buttons      button_pressed;         /* what button is currently pressed on tablet */
+        signed long long int            mouse_x_coord;          /* last mouse x coordinate */
+        signed long long int            mouse_y_coord;          /* last mouse y coordinate */
+};
+#define to_gaomon_dev(d) container_of(d, struct usb_gaomon, kref)
+
+static struct usb_driver gaomon_driver;
+static void gaomon_draw_down(struct usb_gaomon *dev);
+

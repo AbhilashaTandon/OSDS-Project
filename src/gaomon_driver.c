@@ -30,51 +30,87 @@ static enum gaomon_tablet_buttons decode_button_code(int code){
         }
 }
 
+static void handle_button_input(struct usb_gaomon *dev, unsigned char *buf_pos){
+
+        /* 
+         * if(*(buf_pos + 2) != 0x01){
+         *         return false;
+         * }
+         * if(*(buf_pos + 3) != 0x01){
+         *         return false;
+         * }
+         */
+
+        int button_code = (*(buf_pos + 5) << 8) + *(buf_pos + 4);
+
+        pr_info("%04x", button_code);
+
+        enum gaomon_tablet_buttons button = decode_button_code(button_code);
+
+        if(keyboard_input == NULL){
+                pr_info("%s - Keyboard input device uninitialized.\n");
+        }
+        else if(button != NONE){
+                input_report_key(keyboard_input, gaomon_key_bindings[button], 1);
+        }
+        else{
+                input_report_key(keyboard_input, gaomon_key_bindings[dev->button_pressed], 0);
+                input_sync(keyboard_input);
+        }
+
+        dev->button_pressed = button;
+
+}
+
+static void handle_pen_input(struct usb_gaomon *dev, unsigned char *buf_pos, bool pen_press){
+        signed long long int x_coord = (*(buf_pos +  9) << 24) + (*(buf_pos +  8) << 16) + (*(buf_pos + 3) << 8) + *(buf_pos + 2); 
+        signed long long int y_coord = (*(buf_pos + 11) << 24) + (*(buf_pos + 10) << 16) + (*(buf_pos + 5) << 8) + *(buf_pos + 4); 
+        unsigned int pen_pressure = (*(buf_pos + 7) << 8) + *(buf_pos + 6);
+
+        // report input here
+
+        pr_info("%s - %lld\t%lld\t%d\n", DRIVER_NAME, x_coord, y_coord, pen_pressure);
+
+        dev->mouse_x_coord = x_coord;
+        dev->mouse_y_coord = y_coord;
+}
+
+
 static void gaomon_process_input(struct usb_gaomon *dev, int chunk){
         for(int i = 0; i < chunk-1; i++){
-                unsigned char *buffer_ptr = dev->input_buffer + dev->input_copied + i;
-                if(!(*buffer_ptr == 0x08 && *(buffer_ptr + 1) == 0xe0)){
+                unsigned char *buf_pos = dev->input_buffer + dev->input_copied + i;
+
+                if(*buf_pos != 0x08){
                         continue;
-                }
-                /*
-                 * for(int j = 0; j < 12 && (i + j) < chunk; j++){
-                 *         pr_info("%d: %02x", j, *(buffer_ptr + j));
-                 * }
-                 * pr_info("\n");
-                 */
+                } 
 
                 if(chunk - i < 12){
+                        //not enough space for new input event
                         return;
-                        //not enough space for another button input
-                }
-                if(*(buffer_ptr + 2) != 0x01){
-                        continue;
-                }
-                if(*(buffer_ptr + 3) != 0x01){
-                        continue;
                 }
 
-                int button_code = (*(buffer_ptr + 5) << 8) + *(buffer_ptr + 4);
-
-                pr_info("%04x", button_code);
-
-                enum gaomon_tablet_buttons button = decode_button_code(button_code);
-
-                if(keyboard_input == NULL){
-                        pr_info("%s - Keyboard input device uninitialized.\n");
-                }
-                else if(button != NONE){
-                        input_report_key(keyboard_input, gaomon_key_bindings[button], 1);
-                }
-                else{
-                        input_report_key(keyboard_input, gaomon_key_bindings[gaomon_button_pressed], 0);
-                        input_sync(keyboard_input);
+                switch(*(buf_pos + 1)){
+                        case 0xe0:
+                                handle_button_input(dev, buf_pos);
+                                break;
+                        case 0x80:
+                                handle_pen_input(dev, buf_pos, false);
+                                break;
+                        case 0x81:
+                                handle_pen_input(dev, buf_pos, true);
+                                break;
+                        default:
+                                break;
                 }
 
-                gaomon_button_pressed = button;
-
-                i+=12;
+                i += 12;
         }
+        /*
+         * for(int j = 0; j < 12 && (i + j) < chunk; j++){
+         *         pr_info("%d: %02x", j, *(buf_pos + j));
+         * }
+         * pr_info("\n");
+         */
 }
 
 static void gaomon_delete(struct kref *kref)
@@ -452,6 +488,7 @@ static int gaomon_probe(struct usb_interface *interface,
         dev->input_endpointAddr = endpoint->bEndpointAddress;
         dev->input_interval = endpoint->bInterval;
         dev->input_buffer = kmalloc(dev->input_size, GFP_KERNEL);
+        dev->button_pressed = NONE;
         if (!dev->input_buffer) {
                 retval = -ENOMEM;
                 goto error;

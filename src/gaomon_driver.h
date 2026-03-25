@@ -17,6 +17,7 @@
 #include <linux/errno.h>
 #include <linux/fs.h>
 #include <linux/init.h> // needed for macros
+#include <linux/input.h> 
 #include <linux/kernel.h> 
 #include <linux/kref.h>  
 #include <linux/module.h> //needed by all modules
@@ -71,7 +72,7 @@ struct usb_gaomon {
 	size_t			input_size;		/* the size of the receive buffer */
 	size_t			input_filled;		/* number of bytes in the buffer */
 	size_t			input_copied;		/* already copied to user space */
-	__u8			input_endpointAddr;	/* the address of the bulk in endpoint */
+	__u8			input_endpointAddr;	/* the address of the input endpoint */
 	int			errors;			/* the last request tanked */
 	bool			ongoing_read;		/* a read is going on */
 	spinlock_t		err_lock;		/* lock for errors */
@@ -84,3 +85,23 @@ struct usb_gaomon {
 
 static struct usb_driver gaomon_driver;
 static void gaomon_draw_down(struct usb_gaomon *dev);
+
+static struct input_dev *keyboard_input;
+//probably need a struct input_dev for both keyboard and mouse input
+
+enum gaomon_tablet_buttons{
+        NONE,
+        GAOMON_BUTTON_1,
+        GAOMON_BUTTON_2,
+        GAOMON_BUTTON_3,
+        GAOMON_BUTTON_4,
+        GAOMON_BUTTON_5,
+        GAOMON_BUTTON_6,
+        GAOMON_BUTTON_7,
+        GAOMON_BUTTON_8,
+        GAOMON_BUTTON_9,
+        GAOMON_BUTTON_10,
+};
+
+static enum gaomon_tablet_buttons gaomon_button_pressed = NONE;
+//what button is currently pressed

@@ -11,6 +11,7 @@
 #include "gaomon_driver.h"
 
 static enum gaomon_tablet_buttons decode_button_code(int code){
+        pr_info("%s - Processing button input %d.\n", DRIVER_NAME, code);
         switch(code){
                 case 0x0001: return GAOMON_BUTTON_1;
                 case 0x0002: return GAOMON_BUTTON_2;
@@ -32,37 +33,38 @@ static enum gaomon_tablet_buttons decode_button_code(int code){
 static void gaomon_process_input(struct usb_gaomon *dev, int chunk){
         for(int i = 0; i < chunk-1; i++){
                 unsigned char *buffer_ptr = dev->input_buffer + dev->input_copied + i;
-                if(*buffer_ptr == 0x08 && *(buffer_ptr + 1) == 0xe0){
-                        /*
-                         * for(int j = 0; j < 12 && (i + j) < chunk; j++){
-                         *         pr_info("%d: %02x", j, *(buffer_ptr + j));
-                         * }
-                         * pr_info("\n");
-                         */
-
-                        if(chunk - i < 12){
-                                return;
-                                //not enough space for another button input
-                        }
-                        if(*(buffer_ptr + 2) != 0x01){
-                                continue;
-                        }
-                        if(*(buffer_ptr + 3) != 0x01){
-                                continue;
-                        }
-
-                        int button_code = (*(buffer_ptr + 5) << 8) + *(buffer_ptr + 4);
-
-                        pr_info("%04x", button_code);
-
-                        enum gaomon_tablet_buttons button = decode_button_code(button_code);
-                        gaomon_button_pressed = button;
-
-                        input_report_key(keyboard_input, KEY_A, button);
-                        input_sync(keyboard_input);
-
-                        i+=12;
+                if(!(*buffer_ptr == 0x08 && *(buffer_ptr + 1) == 0xe0)){
+                        continue;
                 }
+                /*
+                 * for(int j = 0; j < 12 && (i + j) < chunk; j++){
+                 *         pr_info("%d: %02x", j, *(buffer_ptr + j));
+                 * }
+                 * pr_info("\n");
+                 */
+
+                if(chunk - i < 12){
+                        return;
+                        //not enough space for another button input
+                }
+                if(*(buffer_ptr + 2) != 0x01){
+                        continue;
+                }
+                if(*(buffer_ptr + 3) != 0x01){
+                        continue;
+                }
+
+                int button_code = (*(buffer_ptr + 5) << 8) + *(buffer_ptr + 4);
+
+                pr_info("%04x", button_code);
+
+                enum gaomon_tablet_buttons button = decode_button_code(button_code);
+                gaomon_button_pressed = button;
+
+                input_report_key(keyboard_input, KEY_A, button);
+                input_sync(keyboard_input);
+
+                i+=12;
         }
 }
 
@@ -165,7 +167,7 @@ static int gaomon_flush(struct file *file, fl_owner_t id)
 
 static void gaomon_read_callback(struct urb *urb)
 {
-        pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
+        // pr_info("%s - Running urb irq callback function.\n", DRIVER_NAME);
 
         struct usb_gaomon *dev;
         unsigned long flags;
@@ -194,21 +196,23 @@ static void gaomon_read_callback(struct urb *urb)
 
         wake_up_interruptible(&dev->input_wait);
 
+        gaomon_process_input(dev, dev->input_filled); 
 
         //resubmit urb because interrupt	
-        // int rv = usb_submit_urb(urb, GFP_ATOMIC);
-        // if(rv){
-        // pr_err("%s - Error: failed resubmitting urb.\n", DRIVER_NAME);
-        // }
-        // else{
-        // pr_info("%s - Successfully resubmitted urb.\n", DRIVER_NAME);
-        // }
+        /* int rv = usb_submit_urb(urb, GFP_ATOMIC);
+         * if(rv){
+         *         pr_err("%s - Error: failed resubmitting urb.\n", DRIVER_NAME);
+         * }
+         * else{
+         *         pr_info("%s - Successfully resubmitted urb.\n", DRIVER_NAME);
+         * }
+         */
 }
 
 static int gaomon_do_read_io(struct usb_gaomon *dev, size_t count)
 
 {
-        pr_info("%s - Running read io function.\n", DRIVER_NAME);
+        // pr_info("%s - Running read io function.\n", DRIVER_NAME);
 
         if(dev->input_urb->status == -EINPROGRESS){
                 pr_info("%s - URB already pending, not resubmitting.\n", DRIVER_NAME);
@@ -349,7 +353,6 @@ retry:
                         rv = -EFAULT;
                 else {
                         rv = chunk;
-                        gaomon_process_input(dev, chunk);
                 }
 
                 // pr_info("%s - Copied %zd bytes to user space.\n", DRIVER_NAME, chunk);
@@ -604,16 +607,7 @@ static int __init gaomon_driver_init(void){
         }
 
         set_bit(EV_KEY, keyboard_input->evbit);
-        set_bit(KEY_A, keyboard_input->evbit);
-        set_bit(KEY_B, keyboard_input->evbit);
-        set_bit(KEY_C, keyboard_input->evbit);
-        set_bit(KEY_D, keyboard_input->evbit);
-        set_bit(KEY_E, keyboard_input->evbit);
-        set_bit(KEY_F, keyboard_input->evbit);
-        set_bit(KEY_G, keyboard_input->evbit);
-        set_bit(KEY_H, keyboard_input->evbit);
-        set_bit(KEY_I, keyboard_input->evbit);
-        set_bit(KEY_J, keyboard_input->evbit);
+        set_bit(KEY_A, keyboard_input->keybit);
 
         error_code = input_register_device(keyboard_input);
         if(error_code){

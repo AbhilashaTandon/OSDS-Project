@@ -61,6 +61,7 @@ static int gaomon_minor_no; /* minor number assigned to our device driver */
 /* arbitrarily chosen */
 
 static struct input_dev *keyboard_input;
+static struct input_dev *pen_input;
 //probably need a struct input_dev for both keyboard and mouse input
 
 enum gaomon_tablet_buttons{
@@ -101,8 +102,6 @@ struct usb_gaomon {
 	unsigned long		        disconnected:1;
 	wait_queue_head_t       	input_wait;		/* to wait for an ongoing read */
         enum gaomon_tablet_buttons      button_pressed;         /* what button is currently pressed on tablet */
-        signed long long int            mouse_x_coord;          /* last mouse x coordinate */
-        signed long long int            mouse_y_coord;          /* last mouse y coordinate */
 };
 #define to_gaomon_dev(d) container_of(d, struct usb_gaomon, kref)
 

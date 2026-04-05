@@ -60,9 +60,8 @@ static int gaomon_minor_no; /* minor number assigned to our device driver */
 #define WRITES_IN_FLIGHT	8
 /* arbitrarily chosen */
 
-static struct input_dev *keyboard_input;
-static struct input_dev *pen_input;
-//probably need a struct input_dev for both keyboard and mouse input
+static struct input_dev *gaomon_input;
+//don't need a struct input_dev for both keyboard and mouse input
 
 enum gaomon_tablet_buttons{
         NONE,
@@ -85,7 +84,6 @@ static int gaomon_key_bindings[11] = {KEY_ESC, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E
 struct usb_gaomon {
 	struct usb_device       	*udev;			/* the usb device for this device */
 	struct usb_interface    	*interface;		/* the interface for this device */
-	struct semaphore        	limit_sem;		/* limiting the number of writes in progress */
 	struct usb_anchor       	submitted;		/* in case we need to retract our submissions */
 	struct urb	        	*input_urb;		/* the urb to read data with */
 	unsigned char                   *input_buffer;          /* the buffer to receive data */

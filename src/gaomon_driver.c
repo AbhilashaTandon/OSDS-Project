@@ -85,6 +85,7 @@ static void handle_pen_input(struct usb_gaomon *dev, unsigned char *buf_pos, boo
                 input_report_key(gaomon_input, BTN_TOUCH, 1);
         }
         else{
+                input_report_abs(gaomon_input, ABS_PRESSURE, 0);
                 input_report_key(gaomon_input, BTN_TOUCH, 0);
         }
         input_sync(gaomon_input);
@@ -744,10 +745,13 @@ static int __init gaomon_driver_init(void){
         set_bit(ABS_Y,          gaomon_input->absbit);
         set_bit(ABS_PRESSURE,   gaomon_input->absbit);
 
-        input_set_abs_params(gaomon_input, ABS_X,          0, 0x10cda, 0, 0);
-        input_set_abs_params(gaomon_input, ABS_Y,          0, 0x972e,  0, 0);
-        //these values are specific to my tablet
-        input_set_abs_params(gaomon_input, ABS_PRESSURE,   0, 0x1fff,  0, 0);
+        int y_axis_shift = 0x900;
+        //0x1599 adjustments done to correctly map to virtualbox window size
+
+        input_set_abs_params(gaomon_input, ABS_X,          -X_AXIS_OFFSET, MAX_X_COORD - X_AXIS_OFFSET, 0, 0);
+        input_set_abs_params(gaomon_input, ABS_Y,          Y_AXIS_PADDING - Y_AXIS_OFFSET, MAX_Y_COORD - Y_AXIS_PADDING - Y_AXIS_OFFSET,  0, 0);
+        //these values are specific to my tablet and screen size 
+        input_set_abs_params(gaomon_input, ABS_PRESSURE,   0, MAX_PRESSURE,  0, 0);
         input_abs_set_res(gaomon_input, ABS_X, 200);
         input_abs_set_res(gaomon_input, ABS_Y, 200);
 
